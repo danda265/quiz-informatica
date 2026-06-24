@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Quiz Informática Básica</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f0f4f8;--card:#fff;--text:#2c3e50;--muted:#7f8c8d;
+  --border:#d1d5db;--ok:#27ae60;--err:#e74c3c;
+  --primary:#1a5276;--pl:#2e86c1;
+}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);min-height:100vh;padding:20px}
+[hidden]{display:none!important}
+
+/* ── Login ── */
+.login-wrap{max-width:380px;margin:80px auto}
+.login-card{background:var(--card);border-radius:16px;padding:36px;
+  box-shadow:0 4px 24px rgba(0,0,0,.1);text-align:center}
+.login-icon{font-size:2.5rem;margin-bottom:12px}
+.login-card h2{color:var(--primary);margin-bottom:4px;font-size:1.3rem}
+.login-card p{color:var(--muted);font-size:.87rem;margin-bottom:24px}
+input[type=password]{width:100%;padding:12px 15px;border:2px solid var(--border);
+  border-radius:10px;font-size:1rem;outline:none;margin-bottom:12px;
+  transition:border-color .2s}
+input[type=password]:focus{border-color:var(--pl)}
+.err-msg{color:var(--err);font-size:.85rem;margin-top:6px}
+
+/* ── Botões ── */
+.btn{padding:10px 18px;border:none;border-radius:8px;font-size:.88rem;
+  font-weight:600;cursor:pointer;transition:all .18s}
+.btn-full{width:100%}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--pl)}
+.btn-outline{background:transparent;color:var(--primary);border:2px solid var(--primary)}
+.btn-outline:hover{background:var(--primary);color:#fff}
+.btn-green{background:var(--ok);color:#fff}
+.btn-green:hover{background:#219a52}
+.btn-sm{padding:7px 13px;font-size:.8rem}
+
+/* ── Header admin ── */
+.admin-header{display:flex;align-items:center;flex-wrap:wrap;gap:10px;
+  margin-bottom:20px;max-width:1140px;margin-left:auto;margin-right:auto}
+.admin-header h1{font-size:1.15rem;color:var(--primary);font-weight:700;flex:1;
+  min-width:200px}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select{padding:8px 12px;border:2px solid var(--border);border-radius:8px;
+  font-size:.85rem;background:#fff;color:var(--text);cursor:pointer;outline:none}
+select:focus{border-color:var(--pl)}
+
+/* ── Summary cards ── */
+.cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+  max-width:1140px;margin:0 auto 20px}
+@media(max-width:600px){.cards-row{grid-template-columns:repeat(2,1fr)}}
+.sum-card{background:var(--card);border-radius:12px;padding:18px 14px;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);text-align:center}
+.sum-card .val{font-size:1.9rem;font-weight:800;color:var(--primary);line-height:1}
+.sum-card .lbl{font-size:.72rem;color:var(--muted);margin-top:4px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+
+/* ── Tabs ── */
+.tabs-wrap{max-width:1140px;margin:0 auto 0}
+.tab-row{display:flex;gap:2px;border-bottom:2px solid var(--border)}
+.tab-btn{padding:10px 22px;border:none;background:none;cursor:pointer;
+  font-size:.9rem;font-weight:600;color:var(--muted);
+  border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab-btn:hover:not(.active){color:var(--text)}
+
+/* ── Content ── */
+.content{max-width:1140px;margin:20px auto 0}
+
+/* ── Charts grid ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:640px){.charts-row{grid-template-columns:1fr}}
+.chart-card{background:var(--card);border-radius:12px;padding:20px;
+  box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.chart-card h3{font-size:.82rem;color:var(--muted);margin-bottom:14px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.chart-wrap{position:relative;height:230px}
+
+/* ── Table ── */
+.table-card{background:var(--card);border-radius:12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);overflow:hidden}
+.table-head{padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center}
+.table-head h3{font-size:.82rem;color:var(--muted);font-weight:700;
+  text-transform:uppercase;letter-spacing:.3px}
+.table-wrap{overflow-x:auto;max-height:420px;overflow-y:auto}
+.table-wrap::-webkit-scrollbar{height:4px;width:4px}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:.87rem}
+thead th{background:#f8f9fa;color:var(--muted);font-size:.73rem;text-transform:uppercase;
+  letter-spacing:.3px;padding:10px 14px;text-align:left;
+  position:sticky;top:0;z-index:1;border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid #f2f2f2;transition:background .15s}
+tbody tr:hover{background:#f5f9ff}
+tbody td{padding:10px 14px;color:var(--text)}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;
+  font-size:.74rem;font-weight:700}
+.b-ok{background:#d5f5e3;color:#1d8348}
+.b-warn{background:#fdebd0;color:#a04000}
+.b-err{background:#fde8e8;color:#b03030}
+
+/* ── Alunos ── */
+.student-list{display:flex;flex-direction:column;gap:8px}
+.s-card{background:var(--card);border-radius:10px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);overflow:hidden}
+.s-head{display:flex;align-items:center;gap:12px;padding:14px 18px;
+  cursor:pointer;transition:background .15s;user-select:none}
+.s-head:hover{background:#f5f9ff}
+.s-av{width:38px;height:38px;border-radius:50%;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:.9rem;flex-shrink:0}
+.s-info{flex:1}
+.s-name{font-weight:700;color:var(--text);font-size:.95rem}
+.s-meta{font-size:.76rem;color:var(--muted);margin-top:2px}
+.chevron{color:var(--muted);font-size:.75rem;transition:transform .2s;margin-left:4px}
+.chevron.open{transform:rotate(180deg)}
+.s-body{display:none;padding:0 18px 14px;border-top:1px solid var(--border)}
+.s-body.open{display:block}
+.attempt-block{padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:.85rem}
+.attempt-block:last-child{border-bottom:none}
+.attempt-info{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.q-list{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.q-item{display:flex;align-items:flex-start;gap:8px;font-size:.81rem;
+  padding:5px 9px;border-radius:6px}
+.q-item.ok{background:#f0fdf4}
+.q-item.er{background:#fff5f5}
+.q-detail-wrong{font-size:.76rem;color:var(--err);margin-top:2px}
+.toggle-btn{background:none;border:none;color:var(--pl);
+  font-size:.76rem;cursor:pointer;margin-top:5px;font-weight:600;padding:0}
+.toggle-btn:hover{text-decoration:underline}
+
+/* ── Dificuldades ── */
+.diff-mod-sel{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.diff-mod-sel label{font-size:.87rem;font-weight:600;color:var(--text)}
+.diff-table{background:var(--card);border-radius:12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);overflow:hidden}
+.diff-row{display:grid;grid-template-columns:1fr 64px 64px 76px;
+  gap:8px;padding:11px 16px;border-bottom:1px solid #f2f2f2;align-items:center}
+.diff-row:last-child{border-bottom:none}
+.diff-row.hdr{background:#f8f9fa;font-size:.73rem;font-weight:700;
+  color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.diff-q{font-size:.85rem;color:var(--text);line-height:1.4}
+.diff-bar{height:5px;background:#eee;border-radius:3px;margin-top:4px;overflow:hidden}
+.diff-fill{height:100%;border-radius:3px}
+.diff-val{text-align:center;font-size:.85rem;font-weight:700}
+.no-data{text-align:center;padding:40px 20px;color:var(--muted);font-size:.9rem}
+.loading{text-align:center;padding:60px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ════ LOGIN ════ -->
+<div id="s-login">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-icon">🔒</div>
+      <h2>Painel do Professor</h2>
+      <p>Informática Básica — CEM Santa</p>
+      <input type="password" id="inp-pwd" placeholder="Senha do professor..." />
+      <button class="btn btn-primary btn-full" onclick="doLogin()">Entrar</button>
+      <div class="err-msg" id="login-err" hidden>Senha incorreta. Tente novamente.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ ADMIN ════ -->
+<div id="s-admin" hidden>
+
+  <div class="admin-header">
+    <h1>📊 Painel do Professor — Informática Básica</h1>
+    <div class="controls">
+      <select id="mod-filter" onchange="applyFilter()">
+        <option value="">Todos os módulos</option>
+        <option>Módulo 1 — Hardware</option>
+        <option>Módulo 2 — Windows</option>
+        <option>Módulo 3 — Arquivos e Pastas</option>
+        <option>Módulo 4 — Digitação</option>
+        <option>Módulo 5 — Internet e Segurança</option>
+        <option>Módulo 6 — Word</option>
+        <option>Módulo 7 — Excel</option>
+        <option>Módulo 8 — PowerPoint</option>
+        <option>Módulo 9 — Manutenção</option>
+        <option>Módulo 10 — Lógica e Programação</option>
+        <option>Módulo 11 — Nuvem e Colaboração</option>
+        <option>Módulo 12 — Projeto Final</option>
+      </select>
+      <button class="btn btn-green btn-sm" onclick="exportCSV()">⬇ Exportar CSV</button>
+      <button class="btn btn-outline btn-sm" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <!-- Cards de resumo -->
+  <div class="cards-row">
+    <div class="sum-card">
+      <div class="val" id="c-total">—</div>
+      <div class="lbl">Tentativas</div>
+    </div>
+    <div class="sum-card">
+      <div class="val" id="c-alunos">—</div>
+      <div class="lbl">Alunos únicos</div>
+    </div>
+    <div class="sum-card">
+      <div class="val" id="c-media">—</div>
+      <div class="lbl">Média geral</div>
+    </div>
+    <div class="sum-card">
+      <div class="val" id="c-pass">—</div>
+      <div class="lbl">Acima de 70%</div>
+    </div>
+  </div>
+
+  <!-- Abas -->
+  <div class="tabs-wrap">
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab('geral',this)">Geral</button>
+      <button class="tab-btn" onclick="switchTab('alunos',this)">Por Aluno</button>
+      <button class="tab-btn" onclick="switchTab('dificuldades',this)">Dificuldades da Turma</button>
+    </div>
+  </div>
+
+  <!-- Aba: Geral -->
+  <div class="content" id="tab-geral">
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3>Distribuição de Desempenho</h3>
+        <div class="chart-wrap"><canvas id="chart-desemp"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Tentativas por Módulo</h3>
+        <div class="chart-wrap"><canvas id="chart-mods"></canvas></div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-head">
+        <h3>Todos os Resultados</h3>
+        <span id="lbl-total" style="font-size:.8rem;color:var(--muted)"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Aluno</th><th>Módulo</th><th>Acertos</th><th>Nota</th><th>Data</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aba: Por Aluno -->
+  <div class="content" id="tab-alunos" hidden>
+    <div class="student-list" id="student-list"></div>
+  </div>
+
+  <!-- Aba: Dificuldades -->
+  <div class="content" id="tab-dificuldades" hidden>
+    <div class="diff-mod-sel">
+      <label>Módulo para análise:</label>
+      <select id="diff-sel" onchange="renderDiff()">
+        <option value="">— selecione um módulo —</option>
+        <option>Módulo 1 — Hardware</option>
+        <option>Módulo 2 — Windows</option>
+        <option>Módulo 3 — Arquivos e Pastas</option>
+        <option>Módulo 4 — Digitação</option>
+        <option>Módulo 5 — Internet e Segurança</option>
+        <option>Módulo 6 — Word</option>
+        <option>Módulo 7 — Excel</option>
+        <option>Módulo 8 — PowerPoint</option>
+        <option>Módulo 9 — Manutenção</option>
+        <option>Módulo 10 — Lógica e Programação</option>
+        <option>Módulo 11 — Nuvem e Colaboração</option>
+        <option>Módulo 12 — Projeto Final</option>
+      </select>
+    </div>
+
+    <div class="charts-row" id="diff-chart-row" hidden>
+      <div class="chart-card" style="grid-column:1/-1">
+        <h3>Top 5 Questões com Mais Erros</h3>
+        <div class="chart-wrap"><canvas id="chart-diff"></canvas></div>
+      </div>
+    </div>
+
+    <div id="diff-table-wrap">
+      <div class="no-data">Selecione um módulo para ver as dificuldades da turma.</div>
+    </div>
+  </div>
+
+</div><!-- /s-admin -->
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ════════════════════════════════════════════
+// SENHA — altere aqui para personalizar
+// ════════════════════════════════════════════
+const SENHA = "prof@2025";
+
+// ════════════════════════════════════════════
+// FIREBASE
+// ════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "AIzaSyA7ignAyg4VEZ88wmXq-TMHCEBWjHyLfMo",
+  authDomain:        "avalia-f988b.firebaseapp.com",
+  projectId:         "avalia-f988b",
+  storageBucket:     "avalia-f988b.firebasestorage.app",
+  messagingSenderId: "1092922742454",
+  appId:             "1:1092922742454:web:04eb10656ee8c63cb2f817"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ════════════════════════════════════════════
+// ESTADO
+// ════════════════════════════════════════════
+let allRecs = [], filtRecs = [];
+const charts = {};
+
+const C_PIE  = ['#2980b9','#27ae60','#e74c3c','#f39c12','#8e44ad',
+                '#17a589','#ca6f1e','#cb4335','#7f8c8d','#7d3c98','#5dade2','#b7950b'];
+const C_DESEMP = ['#e74c3c','#f39c12','#3498db','#27ae60'];
+
+// ════════════════════════════════════════════
+// LOGIN / LOGOUT
+// ════════════════════════════════════════════
+function doLogin() {
+  if (document.getElementById("inp-pwd").value === SENHA) {
+    document.getElementById("s-login").hidden = true;
+    document.getElementById("s-admin").hidden  = false;
+    loadData();
+  } else {
+    document.getElementById("login-err").hidden = false;
+  }
+}
+function doLogout() {
+  document.getElementById("s-admin").hidden  = true;
+  document.getElementById("s-login").hidden  = false;
+  document.getElementById("inp-pwd").value   = "";
+  document.getElementById("login-err").hidden = true;
+}
+document.getElementById("inp-pwd").addEventListener("keydown", e => {
+  if (e.key === "Enter") doLogin();
+});
+
+// ════════════════════════════════════════════
+// CARREGAR FIREBASE
+// ════════════════════════════════════════════
+async function loadData() {
+  document.getElementById("tbody").innerHTML =
+    `<tr><td colspan="5" class="loading">Carregando dados…</td></tr>`;
+  try {
+    const snap = await db.collection("quiz_resultados").orderBy("data","desc").get();
+    allRecs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    applyFilter();
+  } catch(e) {
+    document.getElementById("tbody").innerHTML =
+      `<tr><td colspan="5" class="no-data">Erro ao carregar: ${e.message}</td></tr>`;
+  }
+}
+
+// ════════════════════════════════════════════
+// FILTRO DE MÓDULO GLOBAL
+// ════════════════════════════════════════════
+function applyFilter() {
+  const m = document.getElementById("mod-filter").value;
+  filtRecs = m ? allRecs.filter(r => r.modulo === m) : [...allRecs];
+  renderCards();
+  renderTabGeral();
+  renderTabAlunos();
+}
+
+// ════════════════════════════════════════════
+// CARDS DE RESUMO
+// ════════════════════════════════════════════
+function renderCards() {
+  const tot   = filtRecs.length;
+  const uniq  = new Set(filtRecs.map(r => (r.nome||"").trim().toLowerCase())).size;
+  const media = tot ? (filtRecs.reduce((s,r)=>s+(r.acertos||0),0)/tot).toFixed(1) : "—";
+  const pass  = tot ? Math.round(filtRecs.filter(r=>(r.percentual||0)>=70).length/tot*100)+"%" : "—";
+
+  document.getElementById("c-total").textContent  = tot;
+  document.getElementById("c-alunos").textContent = uniq;
+  document.getElementById("c-media").textContent  = media === "—" ? "—" : media+"/10";
+  document.getElementById("c-pass").textContent   = pass;
+}
+
+// ════════════════════════════════════════════
+// ABA: GERAL
+// ════════════════════════════════════════════
+function renderTabGeral() {
+  renderChartDesemp();
+  renderChartMods();
+  renderTableGeral();
+}
+
+function renderChartDesemp() {
+  const f = [0,0,0,0];
+  filtRecs.forEach(r => {
+    const a = r.acertos||0;
+    if      (a <= 3) f[0]++;
+    else if (a <= 5) f[1]++;
+    else if (a <= 7) f[2]++;
+    else             f[3]++;
+  });
+  const ctx = document.getElementById("chart-desemp").getContext("2d");
+  if (charts.desemp) charts.desemp.destroy();
+  charts.desemp = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Insuficiente (0–3)","Regular (4–5)","Bom (6–7)","Excelente (8–10)"],
+      datasets: [{ data: f, backgroundColor: C_DESEMP, borderWidth: 2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position:"bottom", labels:{ font:{size:11}, padding:10 } } }
+    }
+  });
+}
+
+function renderChartMods() {
+  const cnt = {};
+  filtRecs.forEach(r => { cnt[r.modulo||"?"] = (cnt[r.modulo||"?"]||0)+1; });
+  const labels = Object.keys(cnt);
+  const data   = Object.values(cnt);
+  const bg     = labels.map((_,i) => C_PIE[i % C_PIE.length]);
+
+  const ctx = document.getElementById("chart-mods").getContext("2d");
+  if (charts.mods) charts.mods.destroy();
+  charts.mods = new Chart(ctx, {
+    type: "doughnut",
+    data: { labels, datasets: [{ data, backgroundColor: bg, borderWidth: 2 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position:"bottom", labels:{ font:{size:10}, padding:8 } } }
+    }
+  });
+}
+
+function renderTableGeral() {
+  document.getElementById("lbl-total").textContent = `${filtRecs.length} registros`;
+  const tbody = document.getElementById("tbody");
+  if (!filtRecs.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="no-data">Nenhum registro encontrado.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtRecs.map(r => {
+    const p = r.percentual||0;
+    const bc = p>=70 ? "b-ok" : p>=50 ? "b-warn" : "b-err";
+    return `<tr>
+      <td><strong>${esc(r.nome||"—")}</strong></td>
+      <td>${esc(r.modulo||"—")}</td>
+      <td>${r.acertos||0} / ${r.total||10}</td>
+      <td><span class="badge ${bc}">${p}%</span></td>
+      <td style="white-space:nowrap">${fmtDate(r.data)}</td>
+    </tr>`;
+  }).join("");
+}
+
+// ════════════════════════════════════════════
+// ABA: POR ALUNO
+// ════════════════════════════════════════════
+function renderTabAlunos() {
+  const byStudent = {};
+  filtRecs.forEach(r => {
+    const k = (r.nome||"").trim().toLowerCase();
+    if (!byStudent[k]) byStudent[k] = { nome: r.nome||"?", list: [] };
+    byStudent[k].list.push(r);
+  });
+
+  const wrap = document.getElementById("student-list");
+  if (!Object.keys(byStudent).length) {
+    wrap.innerHTML = `<div class="no-data">Nenhum aluno encontrado.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = Object.values(byStudent).map(s => {
+    const best = Math.max(...s.list.map(a=>a.acertos||0));
+    const avg  = Math.round(s.list.reduce((x,a)=>x+(a.percentual||0),0)/s.list.length);
+    const init = s.nome.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
+    const cor  = avg>=70 ? "#27ae60" : avg>=50 ? "#e67e22" : "#e74c3c";
+    const bc   = avg>=70 ? "b-ok" : avg>=50 ? "b-warn" : "b-err";
+    const sid  = "s-" + s.nome.replace(/\W/g,"_");
+
+    const attempts = s.list.map((a,i) => {
+      const ap = a.percentual||0;
+      const aClass = ap>=70?"b-ok":ap>=50?"b-warn":"b-err";
+      const hasQ = a.questoes && a.questoes.length > 0;
+      const detId = `det-${sid}-${i}`;
+      const qHtml = hasQ ? `
+        <button class="toggle-btn" onclick="toggleDet('${detId}')">▶ Ver questão por questão</button>
+        <div id="${detId}" class="q-list" hidden>
+          ${a.questoes.map(q=>`
+            <div class="q-item ${q.ok?'ok':'er'}">
+              <span style="flex-shrink:0">${q.ok?'✅':'❌'}</span>
+              <div>
+                <div>${esc(q.t||"")}</div>
+                ${!q.ok?`<div class="q-detail-wrong">Marcou: ${q.sel||'?'} | Correta: ${q.cor||'?'}</div>`:""}
+              </div>
+            </div>`).join("")}
+        </div>` : "";
+
+      return `<div class="attempt-block">
+        <div class="attempt-info">
+          <strong>${esc(a.modulo||"—")}</strong>
+          <span class="badge ${aClass}">${a.acertos||0}/10 (${ap}%)</span>
+          <span style="color:var(--muted);font-size:.76rem">${fmtDate(a.data)}</span>
+        </div>
+        ${qHtml}
+      </div>`;
+    }).join("");
+
+    return `<div class="s-card">
+      <div class="s-head" onclick="toggleStudent('${sid}')">
+        <div class="s-av" style="background:${cor}">${init}</div>
+        <div class="s-info">
+          <div class="s-name">${esc(s.nome)}</div>
+          <div class="s-meta">${s.list.length} tentativa(s) · Melhor: ${best}/10 · Média: ${avg}%</div>
+        </div>
+        <span class="badge ${bc}" style="margin-right:4px">${avg}%</span>
+        <span class="chevron" id="chev-${sid}">▼</span>
+      </div>
+      <div class="s-body" id="${sid}">${attempts}</div>
+    </div>`;
+  }).join("");
+}
+
+function toggleStudent(id) {
+  const body = document.getElementById(id);
+  const chev = document.getElementById("chev-"+id);
+  if (!body) return;
+  const open = body.classList.toggle("open");
+  if (chev) chev.classList.toggle("open", open);
+}
+
+function toggleDet(id) {
+  const el  = document.getElementById(id);
+  const btn = el && el.previousElementSibling;
+  if (!el) return;
+  el.hidden = !el.hidden;
+  if (btn) btn.textContent = el.hidden ? "▶ Ver questão por questão" : "▼ Ocultar questões";
+}
+
+// ════════════════════════════════════════════
+// ABA: DIFICULDADES DA TURMA
+// ════════════════════════════════════════════
+function renderDiff() {
+  const mod  = document.getElementById("diff-sel").value;
+  const wrap = document.getElementById("diff-table-wrap");
+  const crow = document.getElementById("diff-chart-row");
+
+  if (!mod) {
+    crow.hidden = true;
+    wrap.innerHTML = `<div class="no-data">Selecione um módulo para ver as dificuldades da turma.</div>`;
+    return;
+  }
+
+  const recs = allRecs.filter(r => r.modulo === mod && r.questoes && r.questoes.length > 0);
+  if (!recs.length) {
+    crow.hidden = true;
+    wrap.innerHTML = `<div class="no-data">Ainda não há registros com dados de questões para este módulo.<br><small>Somente tentativas feitas após a atualização do sistema são analisadas.</small></div>`;
+    return;
+  }
+
+  // Agregar por texto de questão
+  const qMap = {};
+  recs.forEach(r => {
+    r.questoes.forEach(q => {
+      if (!qMap[q.t]) qMap[q.t] = { t: q.t, total: 0, erros: 0 };
+      qMap[q.t].total++;
+      if (!q.ok) qMap[q.t].erros++;
+    });
+  });
+  const sorted = Object.values(qMap).sort((a,b)=>(b.erros/b.total)-(a.erros/a.total));
+
+  // Gráfico pizza — top 5
+  const top = sorted.slice(0,5);
+  crow.hidden = false;
+  const ctx = document.getElementById("chart-diff").getContext("2d");
+  if (charts.diff) charts.diff.destroy();
+  charts.diff = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: top.map((_,i)=>`Q${i+1}`),
+      datasets: [{ data: top.map(q=>q.erros),
+        backgroundColor: C_DESEMP.concat(C_PIE).slice(0,5), borderWidth: 2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position:"bottom" },
+        tooltip: {
+          callbacks: {
+            title: ctx => { const q=top[ctx[0].dataIndex]; return q.t.length>55?q.t.slice(0,52)+"…":q.t; },
+            label: ctx => { const q=top[ctx.dataIndex]; return ` ${q.erros} erros de ${q.total} alunos (${Math.round(q.erros/q.total*100)}%)`; }
+          }
+        }
+      }
+    }
+  });
+
+  // Tabela
+  wrap.innerHTML = `
+    <div class="diff-table">
+      <div class="diff-row hdr">
+        <span>Questão</span><span>Alunos</span><span>Erros</span><span>% Erro</span>
+      </div>
+      ${sorted.map((q,i)=>{
+        const ep  = Math.round(q.erros/q.total*100);
+        const cor = ep>=70?"#e74c3c":ep>=40?"#e67e22":"#27ae60";
+        return `<div class="diff-row">
+          <div>
+            <div class="diff-q"><strong>Q${i+1}.</strong> ${esc(q.t)}</div>
+            <div class="diff-bar">
+              <div class="diff-fill" style="width:${ep}%;background:${cor}"></div>
+            </div>
+          </div>
+          <div class="diff-val">${q.total}</div>
+          <div class="diff-val" style="color:#e74c3c">${q.erros}</div>
+          <div class="diff-val" style="color:${cor}">${ep}%</div>
+        </div>`;
+      }).join("")}
+    </div>`;
+}
+
+// ════════════════════════════════════════════
+// TROCA DE ABA
+// ════════════════════════════════════════════
+function switchTab(name, btn) {
+  ["geral","alunos","dificuldades"].forEach(t =>
+    document.getElementById("tab-"+t).hidden = t !== name);
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  if (name === "geral")       { renderChartDesemp(); renderChartMods(); }
+  if (name === "dificuldades") renderDiff();
+}
+
+// ════════════════════════════════════════════
+// EXPORTAR CSV
+// ════════════════════════════════════════════
+function exportCSV() {
+  const rows = [["Nome","Módulo","Acertos","Total","% Acertos","Data"]];
+  filtRecs.forEach(r => rows.push([
+    r.nome||"", r.modulo||"",
+    r.acertos||0, r.total||10,
+    (r.percentual||0)+"%", fmtDate(r.data)
+  ]));
+  const csv  = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n");
+  const blob = new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8"});
+  const a    = Object.assign(document.createElement("a"),
+    {href:URL.createObjectURL(blob), download:"resultados_quiz.csv"});
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ════════════════════════════════════════════
+// UTILITÁRIOS
+// ════════════════════════════════════════════
+function fmtDate(ts) {
+  if (!ts) return "—";
+  try {
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString("pt-BR") + " " +
+           d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  } catch { return "—"; }
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+</script>
+</body>
+</html>

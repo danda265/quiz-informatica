@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exercícios — Informática Básica</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f0f4f8;--card:#fff;--text:#2c3e50;--muted:#7f8c8d;
+  --border:#d1d5db;--ok:#27ae60;--err:#e74c3c;
+}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);min-height:100vh;padding:16px}
+[hidden]{display:none!important}
+
+/* ── topo ── */
+.topbar{text-align:center;margin-bottom:20px}
+.topbar h1{color:#1a5276;font-size:1.4rem;font-weight:700}
+.topbar p{color:var(--muted);font-size:.85rem;margin-top:3px}
+
+/* ── card genérico ── */
+.card{background:var(--card);border-radius:16px;padding:28px;
+  box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:640px;margin:0 auto}
+
+/* ── grid de módulos ── */
+.mod-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+  max-width:720px;margin:0 auto}
+@media(max-width:520px){.mod-grid{grid-template-columns:repeat(2,1fr)}}
+.mod-card{background:var(--card);border-radius:14px;padding:18px 12px;
+  text-align:center;cursor:pointer;border:2px solid transparent;
+  box-shadow:0 2px 10px rgba(0,0,0,.07);transition:all .18s;
+  display:flex;flex-direction:column;align-items:center;gap:6px}
+.mod-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.13)}
+.mod-emoji{font-size:1.8rem;line-height:1}
+.mod-num{font-size:.72rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.mod-name{font-size:.88rem;font-weight:600;color:var(--text);line-height:1.3}
+
+/* ── tela nome ── */
+.back-btn{display:flex;align-items:center;gap:6px;color:#2e86c1;
+  background:none;border:none;cursor:pointer;font-size:.9rem;
+  font-weight:600;margin-bottom:20px;padding:0}
+.back-btn:hover{text-decoration:underline}
+.mod-banner{display:flex;align-items:center;gap:12px;padding:14px;
+  border-radius:10px;margin-bottom:20px;color:#fff;font-weight:600;font-size:1rem}
+.mod-banner .big-emoji{font-size:1.6rem}
+label{display:block;font-weight:600;color:var(--text);margin-bottom:8px}
+input[type=text]{width:100%;padding:13px 15px;border:2px solid var(--border);
+  border-radius:10px;font-size:1rem;color:var(--text);outline:none;
+  transition:border-color .2s}
+input[type=text]:focus{border-color:#2e86c1}
+
+/* ── botões ── */
+.btn{width:100%;padding:13px;border:none;border-radius:10px;
+  font-size:1rem;font-weight:600;cursor:pointer;transition:all .2s;margin-top:16px}
+.btn-primary{background:#1a5276;color:#fff}
+.btn-primary:hover:not(:disabled){background:#2e86c1;transform:translateY(-1px)}
+.btn-primary:disabled{background:var(--border);color:var(--muted);cursor:not-allowed}
+.btn-secondary{background:transparent;color:#1a5276;border:2px solid #1a5276}
+.btn-secondary:hover{background:#1a5276;color:#fff}
+
+/* ── quiz ── */
+.prog-row{display:flex;justify-content:space-between;margin-bottom:5px}
+.prog-row span{font-size:.82rem;color:var(--muted);font-weight:600}
+.prog-bar{height:6px;background:var(--border);border-radius:3px;
+  margin-bottom:24px;overflow:hidden}
+.prog-fill{height:100%;background:#2e86c1;border-radius:3px;transition:width .4s}
+.qtag{font-size:.75rem;font-weight:700;letter-spacing:.4px;
+  text-transform:uppercase;margin-bottom:10px}
+.qtext{font-size:1.06rem;font-weight:600;color:var(--text);
+  line-height:1.55;margin-bottom:20px}
+.options{display:flex;flex-direction:column;gap:9px;margin-bottom:20px}
+.opt{display:flex;align-items:center;gap:11px;padding:12px 14px;
+  border:2px solid var(--border);border-radius:10px;cursor:pointer;
+  transition:all .18s;background:#fff;user-select:none}
+.opt:hover:not(.sel){border-color:#2e86c1;background:#f0f8ff}
+.opt.sel{border-color:#1a5276;background:#e8f4fd}
+.opt-l{width:30px;height:30px;border-radius:50%;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:.85rem;color:var(--muted);flex-shrink:0;transition:all .18s}
+.opt.sel .opt-l{background:#1a5276;color:#fff}
+.opt-t{font-size:.92rem;color:var(--text);line-height:1.4}
+
+/* ── resultado ── */
+.res-header{text-align:center;margin-bottom:22px}
+.score-circle{width:108px;height:108px;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  margin:0 auto 12px;color:#fff}
+.score-n{font-size:2rem;font-weight:800;line-height:1}
+.score-t{font-size:.8rem;opacity:.85}
+.res-header h2{color:#1a5276;font-size:1.2rem}
+.res-header p{color:var(--muted);margin-top:3px;font-size:.9rem}
+.save-msg{text-align:center;font-size:.82rem;padding:7px 12px;
+  border-radius:8px;background:var(--bg);color:var(--muted);margin-bottom:16px}
+.rev-list{display:flex;flex-direction:column;gap:7px;
+  max-height:320px;overflow-y:auto;margin-bottom:20px;padding-right:2px}
+.rev-list::-webkit-scrollbar{width:4px}
+.rev-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.rev-item{display:flex;align-items:flex-start;gap:9px;padding:10px 12px;
+  border-radius:8px;font-size:.87rem}
+.rev-item.ok{background:#f0fdf4;border-left:3px solid var(--ok)}
+.rev-item.er{background:#fff5f5;border-left:3px solid var(--err)}
+.rev-icon{flex-shrink:0;margin-top:1px}
+.rev-ans{font-size:.79rem;color:var(--ok);margin-top:2px;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Informática Básica</h1>
+  <p>Prof. Anderson Rodrigo Costa — CEM Santa</p>
+</div>
+
+<!-- ══ TELA 1: grade de módulos ══ -->
+<div id="s-modules">
+  <div class="mod-grid" id="mod-grid"></div>
+</div>
+
+<!-- ══ TELA 2: digitar nome ══ -->
+<div class="card" id="s-name" hidden>
+  <button class="back-btn" onclick="goModules()">← Voltar</button>
+  <div class="mod-banner" id="name-banner"></div>
+  <div style="margin-bottom:4px">
+    <label for="inp-name">Seu nome completo</label>
+    <input type="text" id="inp-name" placeholder="Digite seu nome..." autocomplete="name"/>
+  </div>
+  <button class="btn btn-primary" onclick="startQuiz()">Começar →</button>
+</div>
+
+<!-- ══ TELA 3: questão ══ -->
+<div class="card" id="s-quiz" hidden>
+  <div class="prog-row">
+    <span id="prog-txt">Questão 1 de 10</span>
+    <span id="prog-pct">0%</span>
+  </div>
+  <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  <div class="qtag" id="q-module-tag"></div>
+  <div class="qtext" id="q-text"></div>
+  <div class="options" id="options"></div>
+  <button class="btn btn-primary" id="btn-next" onclick="nextQ()" disabled>Avançar →</button>
+</div>
+
+<!-- ══ TELA 4: resultado ══ -->
+<div class="card" id="s-result" hidden>
+  <div class="res-header">
+    <div class="score-circle" id="res-circle">
+      <div class="score-n" id="res-n">0</div>
+      <div class="score-t" id="res-t">de 10</div>
+    </div>
+    <h2 id="res-title">Parabéns!</h2>
+    <p id="res-msg"></p>
+  </div>
+  <div class="save-msg" id="save-msg">Salvando…</div>
+  <div class="rev-list" id="rev-list"></div>
+  <button class="btn btn-primary" onclick="goModules()">Escolher outro Módulo</button>
+  <button class="btn btn-secondary" onclick="retryModule()">Tentar este Módulo novamente</button>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// ════════════════════════════════════════════
+// FIREBASE — substitua com seus dados reais
+// console.firebase.google.com > Configurações
+// ════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "AIzaSyA7ignAyg4VEZ88wmXq-TMHCEBWjHyLfMo",
+  authDomain:        "avalia-f988b.firebaseapp.com",
+  projectId:         "avalia-f988b",
+  storageBucket:     "avalia-f988b.firebasestorage.app",
+  messagingSenderId: "1092922742454",
+  appId:             "1:1092922742454:web:04eb10656ee8c63cb2f817"
+};
+let db = null;
+try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) {}
+
+// ════════════════════════════════════════════
+// MÓDULOS E QUESTÕES (10 por módulo)
+// ════════════════════════════════════════════
+const MODULES = [
+{id:1, name:"Hardware", emoji:"💻", color:"#2980b9", questions:[
+  {t:"O que é a CPU de um computador?",
+   o:["Memória para guardar arquivos permanentemente","Processador que executa as instruções dos programas","Dispositivo que exibe imagens no monitor","Placa que conecta o computador à internet"],c:1},
+  {t:"Qual a principal diferença entre HD e SSD?",
+   o:["HD é mais rápido que SSD","SSD tem partes mecânicas giratórias","SSD é mais rápido e silencioso porque não tem partes mecânicas","Não há diferença prática entre os dois"],c:2},
+  {t:"O mouse é um periférico de:",
+   o:["Saída — envia dados para o usuário","Entrada — envia dados ao computador","Entrada e Saída","Armazenamento"],c:1},
+  {t:"O pendrive é um periférico de:",
+   o:["Somente Entrada","Somente Saída","Entrada e Saída — lê e grava","Processamento"],c:2},
+  {t:"O que é a memória RAM?",
+   o:["Disco que guarda arquivos permanentemente","Memória temporária que armazena dados dos programas em uso","Processador para cálculos gráficos","Componente que carrega o Windows"],c:1},
+  {t:"O que é a placa-mãe (motherboard)?",
+   o:["Componente que gera energia","Placa de vídeo principal","Placa principal que conecta todos os componentes do computador","Gabinete que protege os componentes"],c:2},
+  {t:"A impressora é um periférico de:",
+   o:["Entrada","Saída","Entrada e Saída","Processamento"],c:1},
+  {t:"O teclado é um periférico de:",
+   o:["Saída","Entrada","Entrada e Saída","Armazenamento"],c:1},
+  {t:"O monitor é um periférico de:",
+   o:["Entrada","Saída","Entrada e Saída","Processamento"],c:1},
+  {t:"Qual a diferença entre hardware e software?",
+   o:["Hardware são programas; software são peças físicas","Hardware são peças físicas; software são programas e dados","São sinônimos","Hardware é só o computador; software só o Windows"],c:1}
+]},
+{id:2, name:"Windows", emoji:"🪟", color:"#1a5276", questions:[
+  {t:"O que acontece ao MINIMIZAR uma janela?",
+   o:["O programa é fechado definitivamente","A janela some, mas o programa continua em segundo plano","O arquivo é salvo automaticamente","O programa para de usar RAM"],c:1},
+  {t:"Qual atalho abre o histórico da área de transferência?",
+   o:["Ctrl+C","Ctrl+V","Win+V","Ctrl+Shift+V"],c:2},
+  {t:"Para que serve o atalho Ctrl+Z?",
+   o:["Copiar texto","Fechar a janela","Desfazer a última ação","Salvar o arquivo"],c:2},
+  {t:"O que é a Lixeira do Windows?",
+   o:["Pasta de favoritos","Local temporário para arquivos excluídos antes do apagamento definitivo","Ferramenta de limpeza de disco","Programa antivírus"],c:1},
+  {t:"Para que serve o atalho Alt+Tab?",
+   o:["Fechar todos os programas","Alternar entre janelas abertas","Tirar screenshot","Abrir o Gerenciador de Tarefas"],c:1},
+  {t:"O atalho Win+D serve para:",
+   o:["Abrir o navegador padrão","Mostrar a área de trabalho minimizando todas as janelas","Abrir downloads","Desligar o computador"],c:1},
+  {t:"Qual atalho abre o Explorador de Arquivos?",
+   o:["Win+E","Ctrl+E","Win+F","Ctrl+Shift+E"],c:0},
+  {t:"O atalho Win+L serve para:",
+   o:["Abrir o Bloco de Notas","Bloquear a tela do computador","Listar WiFi disponíveis","Abrir o Word"],c:1},
+  {t:"Para que serve o atalho Ctrl+A?",
+   o:["Abrir novo documento","Selecionar todos os elementos","Adicionar arquivo","Alinhamento automático"],c:1},
+  {t:"Qual a diferença entre FECHAR e MINIMIZAR uma janela?",
+   o:["São a mesma coisa","Fechar encerra o programa; Minimizar mantém rodando em segundo plano","Minimizar encerra; Fechar mantém em segundo plano","Fechar salva; Minimizar descarta"],c:1}
+]},
+{id:3, name:"Arquivos e Pastas", emoji:"📁", color:"#17a589", questions:[
+  {t:"Qual extensão identifica um arquivo do Microsoft Word?",
+   o:[".xlsx",".pptx",".docx",".pdf"],c:2},
+  {t:"Qual extensão identifica um arquivo do Microsoft Excel?",
+   o:[".docx",".xlsx",".pptx",".txt"],c:1},
+  {t:"Um arquivo .pdf é:",
+   o:["Arquivo de vídeo","Documento do Word","Formato portátil, geralmente não editável diretamente","Imagem fotográfica"],c:2},
+  {t:"O que é o 'caminho' (path) de um arquivo?",
+   o:["Nome do arquivo sem extensão","Endereço completo que indica a localização no sistema de pastas","Tamanho do arquivo em KB","Data de criação"],c:1},
+  {t:"Qual a diferença entre Copiar (Ctrl+C) e Recortar (Ctrl+X)?",
+   o:["São idênticos","Copiar mantém o original; Recortar move o arquivo","Recortar cria uma cópia; Copiar apaga o original","Copiar é para texto; Recortar para imagens"],c:1},
+  {t:"Por que usar 'Ejetar com segurança' antes de remover o pendrive?",
+   o:["Para não perder a garantia","Garantir que dados foram gravados e evitar corrupção de arquivos","É apenas formalidade, não faz diferença","Para apagar a luz de LED"],c:1},
+  {t:"Um arquivo com extensão .zip é:",
+   o:["Arquivo de áudio","Arquivo compactado que pode conter vários outros arquivos","Arquivo de vídeo","Arquivo de configuração do Windows"],c:1},
+  {t:"Qual extensão indica um arquivo de VÍDEO?",
+   o:[".docx",".mp3",".mp4",".xlsx"],c:2},
+  {t:"Qual a diferença entre PASTA e ARQUIVO?",
+   o:["São a mesma coisa","Pasta organiza e agrupa arquivos; arquivo contém os dados em si","Arquivo organiza pastas; pasta contém dados","Pasta só existe em pendrives"],c:1},
+  {t:"Qual atalho abre o Explorador de Arquivos para navegar pelas pastas?",
+   o:["Ctrl+F","Win+E","Alt+E","Ctrl+N"],c:1}
+]},
+{id:4, name:"Digitação", emoji:"⌨️", color:"#229954", questions:[
+  {t:"No método de 10 dedos, quais teclas formam a 'home row' da mão ESQUERDA?",
+   o:["QWER","ZXCV","ASDF","UIOP"],c:2},
+  {t:"No método de 10 dedos, quais teclas formam a 'home row' da mão DIREITA?",
+   o:["YUIO","HJKL","JKL;","BNMM"],c:2},
+  {t:"O que significa WPM na digitação?",
+   o:["Windows Per Minute","Words Per Minute (Palavras Por Minuto)","Width Per Monitor","Work Per Module"],c:1},
+  {t:"Qual a diferença entre Backspace e Delete?",
+   o:["São iguais — ambas apagam à esquerda","Backspace apaga à ESQUERDA do cursor; Delete apaga à DIREITA","Delete apaga à esquerda; Backspace à direita","Backspace apaga palavras inteiras"],c:1},
+  {t:"Qual combinação digita o símbolo @ no teclado brasileiro?",
+   o:["Shift+2","AltGr+Q","Ctrl+Alt+@","Shift+@"],c:1},
+  {t:"No método de 10 dedos, qual dedo usa a barra de espaço?",
+   o:["Indicador direito","Dedo mínimo esquerdo","Polegar","Dedo médio"],c:2},
+  {t:"Para que serve a tecla Shift?",
+   o:["Desfazer a última ação","Digitar maiúsculas temporariamente e acessar caracteres especiais","Confirmar uma ação (igual ao Enter)","Travar maiúsculas permanentemente"],c:1},
+  {t:"O que faz a tecla CapsLock?",
+   o:["Digita maiúsculas apenas enquanto pressionada","Trava o teclado completamente","Ativa o modo de letras maiúsculas permanentemente até ser pressionada de novo","Aumenta o volume"],c:2},
+  {t:"Qual a principal vantagem do método de 10 dedos?",
+   o:["O teclado dura mais","Aumentar velocidade e reduzir erros, sem precisar olhar para o teclado","É exigido para usar o Windows","Evita vírus"],c:1},
+  {t:"Para que serve a tecla Enter?",
+   o:["Apenas para confirmar formulários online","Confirmar ações e criar nova linha em textos","Abrir o menu Iniciar","Salvar o arquivo atual"],c:1}
+]},
+{id:5, name:"Internet e Segurança", emoji:"🌐", color:"#ca6f1e", questions:[
+  {t:"O que é phishing?",
+   o:["Vírus que apaga arquivos","Programa para acelerar a internet","Tentativa de golpe por e-mail ou site falso para roubar dados pessoais","Técnica para compactar arquivos"],c:2},
+  {t:"Qual das opções é uma senha FORTE?",
+   o:["123456","seunome123","datanascimento","K#9mP@vL2x!"],c:3},
+  {t:"O modo anônimo do navegador NÃO faz o quê?",
+   o:["Evita salvar histórico localmente","Evita salvar cookies após fechar","Impede o provedor de internet de ver o que você acessa","Evita salvar senhas digitadas na sessão"],c:2},
+  {t:"O que é uma fake news?",
+   o:["Site de notícias internacional","Notícia falsa ou enganosa criada para manipular ou desinformar","Programa de vírus","Tipo de golpe bancário"],c:1},
+  {t:"O que é malware?",
+   o:["Software de atualização do sistema","Software malicioso criado para prejudicar o computador ou roubar dados","Programa de backup","Ferramenta de limpeza do navegador"],c:1},
+  {t:"Qual a diferença entre HTTP e HTTPS?",
+   o:["HTTPS é mais lento","HTTP é mais seguro","HTTPS usa criptografia para proteger dados; HTTP não é criptografado","São exatamente iguais"],c:2},
+  {t:"O que é 'pegada digital'?",
+   o:["Impressão digital usada para desbloquear celular","Rastros e informações que você deixa na internet ao navegar, postar e interagir","Histórico de downloads do computador","Cache do navegador"],c:1},
+  {t:"Você recebeu e-mail do 'banco' pedindo sua senha. O que fazer?",
+   o:["Clicar no link e verificar","Responder o e-mail pedindo informações","Não clicar — é phishing. Acessar o site oficial do banco diretamente","Encaminhar para amigos"],c:2},
+  {t:"Uma senha ideal deve ter pelo menos:",
+   o:["4 caracteres numéricos","6 letras minúsculas","8 caracteres com maiúsculas, minúsculas, números e símbolos","O nome do usuário com números"],c:2},
+  {t:"O que significa fazer download de um arquivo?",
+   o:["Enviar para outro computador","Baixar um arquivo da internet para o seu computador","Compactar para economizar espaço","Salvar na nuvem"],c:1}
+]},
+{id:6, name:"Word", emoji:"📝", color:"#2471a3", questions:[
+  {t:"Como criar um sumário automático no Word?",
+   o:["Digitar manualmente cada título e número de página","Inserir > Cabeçalho","Aplicar estilos Título 1/2 e usar Referências > Sumário","Ctrl+S ao terminar"],c:2},
+  {t:"Qual atalho inicia a verificação ortográfica no Word?",
+   o:["Ctrl+P","F7","Ctrl+F","F5"],c:1},
+  {t:"Qual atalho SALVA um documento?",
+   o:["Ctrl+S","Ctrl+P","Ctrl+N","Ctrl+A"],c:0},
+  {t:"Quais são as margens ABNT padrão para trabalhos escolares?",
+   o:["2cm em todos os lados","Superior e esquerda: 3cm; inferior e direita: 2cm","3cm em todos os lados","1,5cm em todos os lados"],c:1},
+  {t:"Qual a diferença entre salvar como .docx e .pdf?",
+   o:["São iguais — só muda extensão",".docx é editável; .pdf é fixo/portátil, ideal para compartilhar",".pdf é facilmente editável; .docx não",".docx é para impressão; .pdf para edição"],c:1},
+  {t:"O atalho Ctrl+B no Word serve para:",
+   o:["Inserir tabela","Aplicar negrito ao texto selecionado","Buscar texto","Salvar como PDF"],c:1},
+  {t:"O atalho Ctrl+I no Word serve para:",
+   o:["Imprimir","Aplicar itálico ao texto selecionado","Inserir imagem","Verificação ortográfica"],c:1},
+  {t:"O atalho Ctrl+P no Word serve para:",
+   o:["Negrito","Pausar edição","Abrir a janela de impressão","Pesquisar texto"],c:2},
+  {t:"O atalho Ctrl+F no Word serve para:",
+   o:["Fechar o documento","Localizar e substituir texto","Formatar parágrafos","Inserir nota de rodapé"],c:1},
+  {t:"Qual o recuo de primeira linha padrão nas normas ABNT?",
+   o:["0,5 cm","1 cm","1,25 cm","2 cm"],c:2}
+]},
+{id:7, name:"Excel", emoji:"📊", color:"#1d8348", questions:[
+  {t:"Qual função do Excel soma um intervalo de células?",
+   o:["=MEDIA()","=CONTA()","=SOMA()","=TOTAL()"],c:2},
+  {t:"Qual função calcula a média de um intervalo?",
+   o:["=SOMA()","=MEDIA()","=SE()","=CONT.SE()"],c:1},
+  {t:"Qual fórmula exibe 'Aprovado' se A1 ≥ 7 e 'Reprovado' caso contrário?",
+   o:["=SOMA(A1>=7;\"Aprovado\";\"Reprovado\")","=SE(A1>=7;\"Aprovado\";\"Reprovado\")","=MEDIA(A1;7)","=APROVADO(A1)"],c:1},
+  {t:"O que significa $ em uma referência como $B$1?",
+   o:["Formata como moeda","Torna a referência absoluta — não muda ao copiar a fórmula","Protege a célula","Indica porcentagem"],c:1},
+  {t:"O que é uma planilha no Excel?",
+   o:["Uma apresentação de slides","Tabela de linhas e colunas para organizar e calcular dados","Editor de textos avançado","Ferramenta de email"],c:1},
+  {t:"O que é Formatação Condicional?",
+   o:["Formatação só para tabelas dinâmicas","Recurso que formata células automaticamente baseado em condições ou valores","Fórmula para formatar textos","Estilo padrão do Excel"],c:1},
+  {t:"Para que serve um gráfico no Excel?",
+   o:["Imprimir planilhas coloridas","Representar dados visualmente, facilitando análise e comparação","Calcular fórmulas complexas","Criar apresentações"],c:1},
+  {t:"O que faz a função =CONT.SE()?",
+   o:["Soma células com condição","Conta células que atendem a uma condição específica","Verifica se célula está vazia","Conta todas as células"],c:1},
+  {t:"O que é uma Tabela Dinâmica (Pivot Table)?",
+   o:["Tabela que gira sozinha","Resumo interativo para analisar e organizar grandes volumes de dados","Tabela com fórmulas coloridas","Tabela que se atualiza a cada segundo"],c:1},
+  {t:"O que significa a referência A1 no Excel?",
+   o:["Primeira planilha, coluna 1","Coluna A, linha 1 — célula no cruzamento dessas coordenadas","Primeiro arquivo aberto","Célula com maior valor"],c:1}
+]},
+{id:8, name:"PowerPoint", emoji:"📽️", color:"#cb4335", questions:[
+  {t:"O que estabelece a Regra 10-20-30?",
+   o:["10 slides, 20 fontes, 30 imagens","Máximo 10 slides, 20 min de apresentação e fonte mínima de 30pt","10 animações, 20 transições, 30 slides","10 cores, 20 slides, 30s por slide"],c:1},
+  {t:"Qual tecla inicia a apresentação em tela cheia?",
+   o:["F1","Enter","F5","Ctrl+P"],c:2},
+  {t:"Qual a diferença entre Transição e Animação no PowerPoint?",
+   o:["São a mesma coisa","Transição é o efeito ENTRE slides; Animação é o efeito de elementos DENTRO de um slide","Animação é entre slides; Transição é dentro do slide","Transição é para textos; Animação para imagens"],c:1},
+  {t:"O que é SmartArt no PowerPoint?",
+   o:["Filtro de foto inteligente","Gráficos visuais pré-formatados para listas, processos, hierarquias e ciclos","IA que cria slides automaticamente","Ferramenta de correção ortográfica visual"],c:1},
+  {t:"O que é um Layout de slide?",
+   o:["A cor de fundo","Estrutura pré-definida que organiza os elementos no slide (título, conteúdo, imagem...)","O tema visual com fontes e cores","A resolução do slide"],c:1},
+  {t:"No modo 'Classificação de Slides' você pode:",
+   o:["Editar texto em detalhes","Ver todos os slides em miniatura e reordená-los facilmente","Assistir à apresentação em tela cheia","Editar o tema"],c:1},
+  {t:"Qual atalho insere um novo slide no PowerPoint?",
+   o:["Ctrl+N","Ctrl+S","Ctrl+M","Ctrl+Enter"],c:2},
+  {t:"O que são as 'Notas do Apresentador'?",
+   o:["Comentários visíveis para o público","Texto visível apenas para o apresentador, não projetado para o público","Roteiro impresso dos slides","Anotações salvas automaticamente"],c:1},
+  {t:"Como converter uma apresentação PowerPoint em PDF?",
+   o:["Ctrl+P e imprimir como PDF","Arquivo > Salvar Como > escolher PDF","As duas alternativas estão corretas","Não é possível"],c:2},
+  {t:"Por que seguir a Regra 10-20-30 melhora apresentações?",
+   o:["O PowerPoint exige esse formato","Manter o público engajado, evitar excesso de informação e garantir boa leitura","Economizar memória","Compatibilidade com outros programas"],c:1}
+]},
+{id:9, name:"Manutenção", emoji:"🔧", color:"#717d7e", questions:[
+  {t:"O que é a Regra 3-2-1 de backup?",
+   o:["Backup 3x/dia, 2 pendrives, 1x/semana","3 cópias dos dados, em 2 mídias diferentes, sendo 1 fora do local físico","Backup de 3 pastas em 2 computadores 1x/mês","3 HDs, 2 pendrives, 1 nuvem"],c:1},
+  {t:"Qual atalho abre o Gerenciador de Tarefas diretamente?",
+   o:["Ctrl+Alt+Del e escolher na lista","Ctrl+Shift+Esc","Win+T","Alt+Tab"],c:1},
+  {t:"Por que é importante manter o Windows atualizado?",
+   o:["Apenas para mudar o visual","Corrigir vulnerabilidades de segurança e bugs, protegendo o computador","Aumentar a velocidade do processador","Liberar espaço automaticamente"],c:1},
+  {t:"O que é desfragmentação? (E quando NÃO usar?)",
+   o:["Apagar duplicados; não usar em SSDs","Reorganizar dados fragmentados no HD para acesso mais rápido; NÃO usar em SSD","Verificar erros; não usar em HDs antigos","Formatar; não usar com arquivos importantes"],c:1},
+  {t:"O que faz o comando 'sfc /scannow' no Windows?",
+   o:["Verifica e repara arquivos de sistema corrompidos","Formata o disco rígido","Varre vírus","Atualiza drivers"],c:0},
+  {t:"Para que serve a 'Limpeza de Disco'?",
+   o:["Formata para reinstalar o Windows","Remove arquivos temporários e desnecessários para liberar espaço","Desfragmenta o disco","Remove programas"],c:1},
+  {t:"Qual a melhor proteção contra vírus e malware?",
+   o:["Nunca usar internet","Manter antivírus e SO atualizados e não clicar em links suspeitos","Usar programas piratas","Desligar o firewall"],c:1},
+  {t:"Por que o computador pode superaquecer?",
+   o:["Por muitas abas abertas no navegador","Acúmulo de poeira nas ventoinhas e dissipadores de calor","Por ter muitos arquivos salvos","Por usar modo escuro"],c:1},
+  {t:"O que é a BSOD (Tela Azul da Morte)?",
+   o:["Tela de boas-vindas do Windows","Protetor de tela decorativo","Erro crítico do sistema que causa reinicialização automática","Modo de hibernação"],c:2},
+  {t:"Por que reiniciar o computador resolve muitos problemas?",
+   o:["O computador 'esquece' os erros","Limpa a RAM, encerra processos presos e aplica atualizações pendentes","O disco se reorganiza","O antivírus faz varredura completa"],c:1}
+]},
+{id:10, name:"Lógica e Programação", emoji:"🧩", color:"#7d3c98", questions:[
+  {t:"Quais são os 4 pilares do Pensamento Computacional?",
+   o:["Hardware, Software, Internet e Banco de Dados","Decomposição, Reconhecimento de Padrões, Abstração e Algoritmo","Python, Scratch, HTML e CSS","Input, Processamento, Output e Armazenamento"],c:1},
+  {t:"No Python, qual estrutura é usada para DECISÕES condicionais?",
+   o:["for...in","while...do","if...elif...else","print...input"],c:2},
+  {t:"No Python, qual estrutura é usada para REPETIÇÃO (laço)?",
+   o:["if...else","for...in","print()","input()"],c:1},
+  {t:"O que faz a função print() em Python?",
+   o:["Imprime na impressora","Exibe uma mensagem ou valor na tela","Lê dados digitados pelo usuário","Salva dados em arquivo"],c:1},
+  {t:"O que faz a função input() em Python?",
+   o:["Exibe mensagem na tela","Lê e recebe dados digitados pelo usuário","Importa módulo externo","Calcula a soma de números"],c:1},
+  {t:"O que é o Scratch?",
+   o:["Linguagem textual como Python","Ambiente de programação visual por blocos, ideal para iniciantes","Editor de código avançado","Sistema operacional educacional"],c:1},
+  {t:"O que é um algoritmo?",
+   o:["Tipo de vírus","Sequência lógica de passos para resolver um problema","Programa de edição de fotos","O processador do computador"],c:1},
+  {t:"No fluxograma, qual símbolo representa uma DECISÃO (sim/não)?",
+   o:["Retângulo","Losango","Oval/Elipse","Seta"],c:1},
+  {t:"No fluxograma, qual símbolo representa um PROCESSO ou ação?",
+   o:["Losango","Oval/Elipse","Retângulo","Cilindro"],c:2},
+  {t:"O que é uma VARIÁVEL em programação?",
+   o:["Erro no código","Espaço na memória com nome, usado para guardar e manipular valores","Tipo de laço de repetição","Arquivo de configuração"],c:1}
+]},
+{id:11, name:"Nuvem e Colaboração", emoji:"☁️", color:"#2e86c1", questions:[
+  {t:"Quantos GB gratuitos o Google Drive oferece?",
+   o:["5 GB","10 GB","15 GB","50 GB"],c:2},
+  {t:"Diferença entre permissão 'Editor' e 'Visualizador' no Google Drive:",
+   o:["São iguais","Editor pode alterar; Visualizador só lê/vê, sem editar","Visualizador edita; Editor só comenta","Editor é admin; Visualizador é usuário comum"],c:1},
+  {t:"O OneDrive está integrado nativamente a qual sistema?",
+   o:["macOS","Linux","Windows","Android"],c:2},
+  {t:"O que é colaboração em tempo real em documentos de nuvem?",
+   o:["Editar e enviar por e-mail","Vários usuários editando o mesmo documento ao mesmo tempo com atualizações instantâneas","Salvar backup automático a cada hora","Comparar duas versões"],c:1},
+  {t:"O que é 'computação em nuvem' (cloud computing)?",
+   o:["Usar computador perto de janela","Armazenar dados e usar serviços via internet, em servidores remotos","Tipo de processador rápido","Software instalado que funciona offline"],c:1},
+  {t:"O que é sincronização automática na nuvem?",
+   o:["Baixar todos os arquivos de uma vez","Atualizar automaticamente os arquivos em todos os dispositivos quando há alteração","Fazer backup manual diário","Converter arquivos para formato universal"],c:1},
+  {t:"Principal vantagem do armazenamento em nuvem:",
+   o:["Arquivos abrem mais rápido","Acesso de qualquer dispositivo com conexão à internet","Proteção automática contra vírus","Não precisa de internet"],c:1},
+  {t:"Diferença entre Google Docs e Microsoft Word:",
+   o:["São idênticos","Google Docs é online e gratuito; Word é instalado e pago (tem versão online também)","Word é online; Google Docs é instalado","Google Docs só funciona no celular"],c:1},
+  {t:"Como compartilhar um arquivo no Google Drive?",
+   o:["Só por e-mail","Gerar link de compartilhamento ou adicionar e-mails com a permissão desejada","Enviar cópia para cada pessoa","Não é possível no plano gratuito"],c:1},
+  {t:"Por que fazer backup na nuvem é importante?",
+   o:["Para acelerar o computador","Proteger arquivos contra perda por falha de hardware, roubo ou acidentes","Economizar energia","Evitar atualizações do Windows"],c:1}
+]},
+{id:12, name:"Projeto Final", emoji:"🎓", color:"#b7950b", questions:[
+  {t:"O que é ergonomia no uso do computador?",
+   o:["Velocidade de digitação em WPM","Práticas de postura e configuração do ambiente para prevenir lesões","Software de monitoramento de saúde","Qualidade da resolução do monitor"],c:1},
+  {t:"O que é a Regra 20-20-20 para saúde ocular?",
+   o:["Óculos de 20 graus, 20cm do monitor, 20h/dia","A cada 20 min, olhar por 20 segundos para algo a 20 pés (≈6m) de distância","Trabalhar 20min, pausar 20min, dormir 20min","Tela a 20cm, brilho 20%, máx 20h de uso"],c:1},
+  {t:"Para compartilhar documento com formatação preservada, qual formato usar?",
+   o:[".docx",".txt",".pdf",".xlsx"],c:2},
+  {t:"Qual atalho fecha uma aba no navegador?",
+   o:["Ctrl+W","Ctrl+Q","Alt+F4","Ctrl+X"],c:0},
+  {t:"Qual programa usar para cálculos, gráficos e planilhas?",
+   o:["Word","PowerPoint","Excel","Bloco de Notas"],c:2},
+  {t:"Qual programa usar para criar uma apresentação de slides?",
+   o:["Excel","Word","PowerPoint","Paint"],c:2},
+  {t:"Como organizar bem os arquivos do computador?",
+   o:["Salvar tudo na Área de Trabalho","Criar pastas por assunto/projeto com nomes descritivos","Deixar tudo em Downloads","Compactar tudo em um único .zip"],c:1},
+  {t:"Ao receber notícia chocante nas redes sociais, o primeiro passo é:",
+   o:["Compartilhar imediatamente para avisar todos","Verificar fonte, data e checar se outros veículos confirmam","Deletar a conta de quem enviou","Printar e guardar"],c:1},
+  {t:"Qual atalho DESFAZ uma ação em quase todos os programas?",
+   o:["Ctrl+Y","Ctrl+Z","Ctrl+X","Ctrl+D"],c:1},
+  {t:"Ao terminar de usar o pendrive, o correto é:",
+   o:["Remover diretamente da USB a qualquer momento","Usar 'Ejetar com segurança' antes de remover","Desligar o computador e então remover","Formatar antes de remover"],c:1}
+]}
+];
+
+// ════════════════════════════════════════════
+// ESTADO E LÓGICA
+// ════════════════════════════════════════════
+const LETTERS = ["A","B","C","D"];
+let selMod = null, studentName = "", curIdx = 0, selOpt = null, answers = [], quizQs = [];
+
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+// ── Renderizar grade ──
+function buildGrid(){
+  const grid=document.getElementById("mod-grid");
+  grid.innerHTML="";
+  MODULES.forEach(m=>{
+    const d=document.createElement("div");
+    d.className="mod-card";
+    d.style.borderColor=m.color;
+    d.innerHTML=`
+      <div class="mod-emoji">${m.emoji}</div>
+      <div class="mod-num" style="color:${m.color}">Módulo ${m.id}</div>
+      <div class="mod-name">${m.name}</div>`;
+    d.addEventListener("click",()=>openModule(m));
+    grid.appendChild(d);
+  });
+}
+
+// ── Selecionar módulo ──
+function openModule(m){
+  selMod=m;
+  const banner=document.getElementById("name-banner");
+  banner.style.background=m.color;
+  banner.innerHTML=`<span class="big-emoji">${m.emoji}</span> Módulo ${m.id} — ${m.name}`;
+  document.getElementById("inp-name").value="";
+  show("s-name"); hide("s-modules");
+}
+
+function goModules(){
+  hide("s-name"); hide("s-quiz"); hide("s-result");
+  show("s-modules");
+}
+
+// ── Iniciar quiz ──
+function startQuiz(){
+  studentName=document.getElementById("inp-name").value.trim();
+  if(!studentName){
+    const i=document.getElementById("inp-name");
+    i.style.borderColor="#e74c3c"; i.focus(); return;
+  }
+  curIdx=0; selOpt=null; answers=[];
+  quizQs=shuffle(selMod.questions);
+  show("s-quiz"); hide("s-name");
+  renderQ();
+}
+
+function retryModule(){
+  hide("s-result"); openModule(selMod);
+}
+
+// ── Renderizar questão ──
+function renderQ(){
+  const q=quizQs[curIdx], tot=quizQs.length, pct=Math.round(curIdx/tot*100);
+  document.getElementById("prog-txt").textContent=`Questão ${curIdx+1} de ${tot}`;
+  document.getElementById("prog-pct").textContent=`${pct}%`;
+  document.getElementById("prog-fill").style.width=`${pct}%`;
+  document.getElementById("q-module-tag").textContent=`${selMod.emoji} Módulo ${selMod.id} — ${selMod.name}`;
+  document.getElementById("q-module-tag").style.color=selMod.color;
+  document.getElementById("q-text").textContent=q.t;
+
+  const box=document.getElementById("options");
+  box.innerHTML="";
+  q.o.forEach((op,i)=>{
+    const d=document.createElement("div");
+    d.className="opt";
+    d.innerHTML=`<div class="opt-l">${LETTERS[i]}</div><div class="opt-t">${op}</div>`;
+    d.addEventListener("click",()=>pickOpt(i));
+    box.appendChild(d);
+  });
+
+  selOpt=null;
+  const btn=document.getElementById("btn-next");
+  btn.disabled=true;
+  btn.textContent=curIdx===tot-1?"Ver Resultado →":"Avançar →";
+}
+
+function pickOpt(i){
+  document.querySelectorAll(".opt").forEach(o=>o.classList.remove("sel"));
+  document.querySelectorAll(".opt")[i].classList.add("sel");
+  selOpt=i;
+  document.getElementById("btn-next").disabled=false;
+}
+
+function nextQ(){
+  if(selOpt===null)return;
+  const q=quizQs[curIdx];
+  answers.push({text:q.t,sel:selOpt,cor:q.c,ok:selOpt===q.c,opts:q.o});
+  curIdx++;
+  if(curIdx<quizQs.length){renderQ();}else{showResult();}
+}
+
+// ── Resultado ──
+function showResult(){
+  const score=answers.filter(a=>a.ok).length, tot=answers.length;
+  const pct=Math.round(score/tot*100);
+
+  hide("s-quiz"); show("s-result");
+
+  const circle=document.getElementById("res-circle");
+  circle.style.background=selMod.color;
+  document.getElementById("res-n").textContent=score;
+  document.getElementById("res-t").textContent=`de ${tot}`;
+  document.getElementById("res-title").textContent=`${studentName} — ${selMod.name}`;
+  document.getElementById("res-msg").textContent=msg(pct);
+
+  const list=document.getElementById("rev-list");
+  list.innerHTML="";
+  answers.forEach((a,i)=>{
+    const d=document.createElement("div");
+    d.className=`rev-item ${a.ok?"ok":"er"}`;
+    d.innerHTML=`<span class="rev-icon">${a.ok?"✅":"❌"}</span>
+      <div><div style="color:#2c3e50;line-height:1.4"><strong>Q${i+1}.</strong> ${a.text}</div>
+      ${!a.ok?`<div class="rev-ans">Correta: ${LETTERS[a.cor]}) ${a.opts[a.cor]}</div>`:""}</div>`;
+    list.appendChild(d);
+  });
+
+  saveResult(studentName,score,tot,pct,answers);
+}
+
+function msg(p){
+  if(p>=90)return"Excelente! Você domina este módulo! 🏆";
+  if(p>=70)return"Muito bom! Continue assim! ✨";
+  if(p>=50)return"Bom progresso! Revise os erros. 📚";
+  return"Continue estudando — você vai melhorar! 💪";
+}
+
+async function saveResult(name,score,tot,pct,ans){
+  const el=document.getElementById("save-msg");
+  if(!db){el.textContent="⚠️ Firebase não configurado — resultado não salvo.";el.style.color="#e74c3c";return;}
+  try{
+    await db.collection("quiz_resultados").add({
+      nome:name, modulo:`Módulo ${selMod.id} — ${selMod.name}`,
+      acertos:score, total:tot, percentual:pct,
+      data:firebase.firestore.FieldValue.serverTimestamp(),
+      questoes:(ans||[]).map(a=>({t:a.text.substring(0,150),ok:a.ok,sel:LETTERS[a.sel],cor:LETTERS[a.cor]}))
+    });
+    el.textContent=`✅ Salvo: ${name} — ${score}/${tot} (${pct}%)`;
+    el.style.color="#27ae60";
+  }catch(e){el.textContent=`❌ Erro: ${e.message}`;el.style.color="#e74c3c";}
+}
+
+function show(id){document.getElementById(id).hidden=false;}
+function hide(id){document.getElementById(id).hidden=true;}
+
+// Enter no campo de nome
+document.getElementById("inp-name").addEventListener("keydown",e=>{if(e.key==="Enter")startQuiz();});
+document.getElementById("inp-name").addEventListener("input",function(){
+  this.style.borderColor=this.value.trim()?"#2e86c1":"#d1d5db";});
+
+buildGrid();
+</script>
+</body>
+</html>
