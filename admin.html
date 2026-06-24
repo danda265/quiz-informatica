@@ -220,7 +220,8 @@ tbody td{padding:10px 14px;color:var(--text)}
         <option>Módulo 12 — Projeto Final</option>
       </select>
       <button class="btn btn-sm" style="background:#7d3c98;color:#fff" onclick="toggleLinkGen()">🔗 Gerar Link</button>
-      <button class="btn btn-green btn-sm" onclick="exportCSV()">⬇ CSV</button>
+      <button class="btn btn-green btn-sm" onclick="exportReport()">📄 Relatório PDF</button>
+      <button class="btn btn-outline btn-sm" style="font-size:.76rem" onclick="exportCSV()">CSV</button>
       <button class="btn btn-outline btn-sm" onclick="doLogout()">Sair</button>
     </div>
   </div>
@@ -768,6 +769,184 @@ function copyLink() {
     c.hidden = false;
     setTimeout(()=>c.hidden=true, 2500);
   });
+}
+
+// ════════════════════════════════════════════
+// RELATÓRIO PDF (abre nova janela → imprimir)
+// ════════════════════════════════════════════
+function exportReport() {
+  const escVal = document.getElementById("escola-filter").value;
+  const turVal = document.getElementById("turma-filter").value;
+  const modVal = document.getElementById("mod-filter").value;
+  const filtro = [escVal, turVal, modVal].filter(Boolean).join(" · ") || "Todos os registros";
+
+  const tot   = filtRecs.length;
+  const uniq  = new Set(filtRecs.map(r=>(r.nome||"").trim().toLowerCase())).size;
+  const media = tot ? (filtRecs.reduce((s,r)=>s+(r.acertos||0),0)/tot).toFixed(1) : "—";
+  const pass  = tot ? Math.round(filtRecs.filter(r=>(r.percentual||0)>=70).length/tot*100) : 0;
+
+  const desemp = [0,0,0,0];
+  filtRecs.forEach(r=>{
+    const a=r.acertos||0;
+    if(a<=3)desemp[0]++;else if(a<=5)desemp[1]++;else if(a<=7)desemp[2]++;else desemp[3]++;
+  });
+
+  const modCnt={};
+  filtRecs.forEach(r=>{const m=r.modulo||"?";modCnt[m]=(modCnt[m]||0)+1;});
+  const modLabels=Object.keys(modCnt), modData=Object.values(modCnt);
+  const COLORS=['#2980b9','#27ae60','#e74c3c','#f39c12','#8e44ad','#17a589',
+                '#ca6f1e','#cb4335','#7f8c8d','#7d3c98','#5dade2','#b7950b'];
+
+  const tableRows = filtRecs.map((r,i)=>{
+    const p=r.percentual||0;
+    const bg=p>=70?'#d5f5e3':p>=50?'#fef9e7':'#fde8e8';
+    const fg=p>=70?'#1d8348':p>=50?'#9a6505':'#b03030';
+    return `<tr class="${i%2?'alt':''}">
+      <td><strong>${esc(r.nome||'—')}</strong></td>
+      <td>${esc(r.escola||'—')}</td>
+      <td>${esc(r.turma||'—')}</td>
+      <td>${esc(r.modulo||'—')}</td>
+      <td style="text-align:center;font-weight:700">${r.acertos||0}/10</td>
+      <td style="text-align:center"><span style="background:${bg};color:${fg};
+        padding:3px 10px;border-radius:12px;font-weight:700;font-size:11px">${p}%</span></td>
+      <td style="color:#7f8c8d;font-size:11px">${fmtDate(r.data)}</td>
+    </tr>`;
+  }).join("");
+
+  const html=`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório Quiz Informática</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#fff;color:#2c3e50;padding:28px 36px}
+/* ── topo ── */
+.rpt-header{display:flex;justify-content:space-between;align-items:flex-start;
+  padding-bottom:18px;border-bottom:4px solid #1a5276;margin-bottom:24px}
+.rpt-header h1{font-size:1.3rem;font-weight:800;color:#1a5276}
+.rpt-header .sub{color:#7f8c8d;font-size:.82rem;margin-top:4px}
+.rpt-header .info{text-align:right;font-size:.78rem;color:#7f8c8d;line-height:1.8}
+.badge-filtro{display:inline-block;background:#e8f4fd;color:#1a5276;padding:3px 11px;
+  border-radius:20px;font-size:.75rem;font-weight:700;margin-top:6px}
+/* ── cards ── */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.card{border:2px solid #e8edf2;border-radius:12px;padding:16px;text-align:center;
+  background:linear-gradient(135deg,#f8faff,#fff)}
+.card .v{font-size:2rem;font-weight:800;color:#1a5276;line-height:1}
+.card .l{font-size:.65rem;color:#7f8c8d;font-weight:700;text-transform:uppercase;
+  letter-spacing:.4px;margin-top:5px}
+/* ── charts ── */
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px}
+.chart-box{border:1px solid #e0e6ed;border-radius:12px;padding:18px;
+  background:#fafbff}
+.chart-box h3{font-size:.72rem;font-weight:700;color:#7f8c8d;text-transform:uppercase;
+  letter-spacing:.4px;margin-bottom:14px}
+.chart-wrap{position:relative;height:210px}
+/* ── tabela ── */
+.section-title{font-size:.72rem;font-weight:700;color:#7f8c8d;text-transform:uppercase;
+  letter-spacing:.4px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e0e6ed}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+thead th{background:#1a5276;color:#fff;padding:10px 13px;text-align:left;
+  font-size:.68rem;text-transform:uppercase;letter-spacing:.3px;font-weight:700}
+thead th:nth-child(5),thead th:nth-child(6){text-align:center}
+tbody td{padding:9px 13px;vertical-align:middle;border-bottom:1px solid #f0f2f5}
+tr.alt{background:#f8fafc}
+/* ── rodapé ── */
+.rpt-footer{margin-top:28px;padding-top:12px;border-top:1px solid #e0e6ed;
+  font-size:.72rem;color:#bbb;text-align:center}
+/* ── botões (só tela) ── */
+.no-print{margin-bottom:24px;display:flex;gap:8px}
+.btn-pdf{padding:10px 24px;background:#1a5276;color:#fff;border:none;
+  border-radius:9px;font-size:.9rem;font-weight:700;cursor:pointer;
+  box-shadow:0 2px 8px rgba(26,82,118,.25)}
+.btn-pdf:hover{background:#2e86c1}
+.btn-close{padding:10px 18px;background:transparent;color:#7f8c8d;
+  border:2px solid #d1d5db;border-radius:9px;font-size:.9rem;cursor:pointer}
+@media print{
+  .no-print{display:none!important}
+  body{padding:14px 20px}
+  .card{border:1px solid #ccc!important}
+  .chart-box{border:1px solid #ccc!important}
+}
+</style>
+</head>
+<body>
+<div class="no-print">
+  <button class="btn-pdf" onclick="window.print()">🖨️ Imprimir / Salvar como PDF</button>
+  <button class="btn-close" onclick="window.close()">✕ Fechar</button>
+</div>
+
+<div class="rpt-header">
+  <div>
+    <h1>📊 Relatório — Quiz Informática Básica</h1>
+    <div class="sub">Prof. Anderson Rodrigo Costa</div>
+    <span class="badge-filtro">${esc(filtro)}</span>
+  </div>
+  <div class="info">
+    <div><strong>${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</strong></div>
+    <div>${tot} tentativas · ${uniq} alunos</div>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card"><div class="v">${tot}</div><div class="l">Tentativas</div></div>
+  <div class="card"><div class="v">${uniq}</div><div class="l">Alunos únicos</div></div>
+  <div class="card"><div class="v">${media === "—" ? "—" : media+"/10"}</div><div class="l">Média geral</div></div>
+  <div class="card" style="border-color:${pass>=70?'#a9dfbf':'#f9c0c0'}">
+    <div class="v" style="color:${pass>=70?'#1d8348':'#c0392b'}">${pass}%</div>
+    <div class="l">Acima de 70%</div>
+  </div>
+</div>
+
+<div class="charts">
+  <div class="chart-box">
+    <h3>Distribuição de Desempenho</h3>
+    <div class="chart-wrap"><canvas id="c1"></canvas></div>
+  </div>
+  <div class="chart-box">
+    <h3>Tentativas por Módulo</h3>
+    <div class="chart-wrap"><canvas id="c2"></canvas></div>
+  </div>
+</div>
+
+<div class="section-title">Resultados Detalhados</div>
+<table>
+  <thead>
+    <tr><th>Aluno</th><th>Escola</th><th>Turma</th><th>Módulo</th><th>Acertos</th><th>Nota</th><th>Data</th></tr>
+  </thead>
+  <tbody>${tableRows}</tbody>
+</table>
+
+<div class="rpt-footer">Quiz Informática Básica · github.com/danda265/quiz-informatica</div>
+
+<script>
+window.onload=function(){
+  new Chart(document.getElementById('c1').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['Insuficiente (0–3)','Regular (4–5)','Bom (6–7)','Excelente (8–10)'],
+      datasets:[{data:${JSON.stringify(desemp)},
+        backgroundColor:['#e74c3c','#f39c12','#3498db','#27ae60'],borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}}}}
+  });
+  new Chart(document.getElementById('c2').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:${JSON.stringify(modLabels)},
+      datasets:[{data:${JSON.stringify(modData)},
+        backgroundColor:${JSON.stringify(COLORS.slice(0,modLabels.length))},borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}}}}
+  });
+};
+<\/script>
+</body></html>`;
+
+  const win=window.open('','_blank');
+  if(!win){alert('Permita pop-ups neste site para gerar o relatório.');return;}
+  win.document.write(html);
+  win.document.close();
 }
 
 // ════════════════════════════════════════════
