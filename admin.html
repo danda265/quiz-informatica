@@ -149,6 +149,31 @@ tbody td{padding:10px 14px;color:var(--text)}
 .diff-val{text-align:center;font-size:.85rem;font-weight:700}
 .no-data{text-align:center;padding:40px 20px;color:var(--muted);font-size:.9rem}
 .loading{text-align:center;padding:60px;color:var(--muted)}
+
+/* ── Gerador de links ── */
+.link-gen-panel{background:#f5f0ff;border:1px solid #c8b4f8;border-radius:12px;
+  padding:16px 20px;max-width:1140px;margin:-6px auto 16px}
+.link-gen-panel h4{font-size:.82rem;font-weight:700;color:#7d3c98;margin-bottom:10px}
+.link-gen-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.link-gen-row .lg-field{display:flex;flex-direction:column;gap:3px}
+.link-gen-row .lg-label{font-size:.72rem;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.3px}
+.link-gen-row input{padding:8px 12px;border:2px solid var(--border);border-radius:8px;
+  font-size:.87rem;outline:none}
+.link-gen-row input:focus{border-color:var(--pl)}
+.lg-url-row{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lg-url-row input{flex:1;min-width:220px;padding:8px 12px;border:2px solid var(--pl);
+  border-radius:8px;font-size:.8rem;background:#fff;color:var(--primary);cursor:pointer}
+
+/* ── Hierarquia escola/turma ── */
+.escola-block{margin-bottom:20px}
+.escola-header{background:var(--primary);color:#fff;padding:10px 18px;border-radius:10px 10px 0 0;
+  font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:8px}
+.turma-block{border:1px solid var(--border);border-top:none;background:var(--card)}
+.turma-block:last-child{border-radius:0 0 10px 10px}
+.turma-header{background:#f0f4f8;padding:8px 18px;font-size:.82rem;font-weight:700;
+  color:var(--primary);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.turma-students{padding:8px 12px;display:flex;flex-direction:column;gap:6px}
 </style>
 </head>
 <body>
@@ -173,6 +198,12 @@ tbody td{padding:10px 14px;color:var(--text)}
   <div class="admin-header">
     <h1>📊 Painel do Professor — Informática Básica</h1>
     <div class="controls">
+      <select id="escola-filter" onchange="populateTurmas()">
+        <option value="">Todas as escolas</option>
+      </select>
+      <select id="turma-filter" onchange="applyFilter()">
+        <option value="">Todas as turmas</option>
+      </select>
       <select id="mod-filter" onchange="applyFilter()">
         <option value="">Todos os módulos</option>
         <option>Módulo 1 — Hardware</option>
@@ -188,8 +219,30 @@ tbody td{padding:10px 14px;color:var(--text)}
         <option>Módulo 11 — Nuvem e Colaboração</option>
         <option>Módulo 12 — Projeto Final</option>
       </select>
-      <button class="btn btn-green btn-sm" onclick="exportCSV()">⬇ Exportar CSV</button>
+      <button class="btn btn-sm" style="background:#7d3c98;color:#fff" onclick="toggleLinkGen()">🔗 Gerar Link</button>
+      <button class="btn btn-green btn-sm" onclick="exportCSV()">⬇ CSV</button>
       <button class="btn btn-outline btn-sm" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <!-- Gerador de links por turma -->
+  <div class="link-gen-panel" id="link-gen-panel" hidden>
+    <h4>🔗 Gerador de Link por Turma</h4>
+    <div class="link-gen-row">
+      <div class="lg-field">
+        <span class="lg-label">Escola</span>
+        <input type="text" id="lg-escola" placeholder="Nome da escola..." style="width:200px"/>
+      </div>
+      <div class="lg-field">
+        <span class="lg-label">Turma</span>
+        <input type="text" id="lg-turma" placeholder="Ex: 7A" style="width:90px"/>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="genLink()">Gerar →</button>
+    </div>
+    <div class="lg-url-row" id="lg-result" hidden>
+      <input type="text" id="lg-url" readonly onclick="this.select()"/>
+      <button class="btn btn-sm" style="background:#7d3c98;color:#fff;white-space:nowrap" onclick="copyLink()">📋 Copiar link</button>
+      <span id="lg-copied" hidden style="color:var(--ok);font-size:.8rem;font-weight:700">✅ Copiado!</span>
     </div>
   </div>
 
@@ -243,7 +296,7 @@ tbody td{padding:10px 14px;color:var(--text)}
         <table>
           <thead>
             <tr>
-              <th>Aluno</th><th>Módulo</th><th>Acertos</th><th>Nota</th><th>Data</th>
+              <th>Aluno</th><th>Escola</th><th>Turma</th><th>Módulo</th><th>Acertos</th><th>Nota</th><th>Data</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -355,23 +408,50 @@ document.getElementById("inp-pwd").addEventListener("keydown", e => {
 // ════════════════════════════════════════════
 async function loadData() {
   document.getElementById("tbody").innerHTML =
-    `<tr><td colspan="5" class="loading">Carregando dados…</td></tr>`;
+    `<tr><td colspan="7" class="loading">Carregando dados…</td></tr>`;
   try {
     const snap = await db.collection("quiz_resultados").orderBy("data","desc").get();
     allRecs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    populateEscolaFilter();
     applyFilter();
   } catch(e) {
     document.getElementById("tbody").innerHTML =
-      `<tr><td colspan="5" class="no-data">Erro ao carregar: ${e.message}</td></tr>`;
+      `<tr><td colspan="7" class="no-data">Erro ao carregar: ${e.message}</td></tr>`;
   }
 }
 
 // ════════════════════════════════════════════
-// FILTRO DE MÓDULO GLOBAL
+// FILTROS ENCADEADOS: ESCOLA → TURMA → MÓDULO
 // ════════════════════════════════════════════
+function populateEscolaFilter() {
+  const escolas = [...new Set(allRecs.map(r => r.escola||"(não informado)"))].sort();
+  const sel = document.getElementById("escola-filter");
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todas as escolas</option>' +
+    escolas.map(e => `<option${e===cur?' selected':''}>${esc(e)}</option>`).join("");
+  populateTurmas();
+}
+
+function populateTurmas() {
+  const escolaVal = document.getElementById("escola-filter").value;
+  const src = escolaVal ? allRecs.filter(r=>(r.escola||"(não informado)")===escolaVal) : allRecs;
+  const turmas = [...new Set(src.map(r => r.turma||"(não informado)"))].sort();
+  const sel = document.getElementById("turma-filter");
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todas as turmas</option>' +
+    turmas.map(t => `<option${t===cur?' selected':''}>${esc(t)}</option>`).join("");
+  applyFilter();
+}
+
 function applyFilter() {
+  const e = document.getElementById("escola-filter").value;
+  const t = document.getElementById("turma-filter").value;
   const m = document.getElementById("mod-filter").value;
-  filtRecs = m ? allRecs.filter(r => r.modulo === m) : [...allRecs];
+  filtRecs = allRecs.filter(r => {
+    const re = r.escola||"(não informado)";
+    const rt = r.turma||"(não informado)";
+    return (!e || re===e) && (!t || rt===t) && (!m || r.modulo===m);
+  });
   renderCards();
   renderTabGeral();
   renderTabAlunos();
@@ -448,7 +528,7 @@ function renderTableGeral() {
   document.getElementById("lbl-total").textContent = `${filtRecs.length} registros`;
   const tbody = document.getElementById("tbody");
   if (!filtRecs.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="no-data">Nenhum registro encontrado.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="no-data">Nenhum registro encontrado.</td></tr>`;
     return;
   }
   tbody.innerHTML = filtRecs.map(r => {
@@ -456,6 +536,8 @@ function renderTableGeral() {
     const bc = p>=70 ? "b-ok" : p>=50 ? "b-warn" : "b-err";
     return `<tr>
       <td><strong>${esc(r.nome||"—")}</strong></td>
+      <td>${esc(r.escola||"—")}</td>
+      <td>${esc(r.turma||"—")}</td>
       <td>${esc(r.modulo||"—")}</td>
       <td>${r.acertos||0} / ${r.total||10}</td>
       <td><span class="badge ${bc}">${p}%</span></td>
@@ -465,71 +547,90 @@ function renderTableGeral() {
 }
 
 // ════════════════════════════════════════════
-// ABA: POR ALUNO
+// ABA: POR ALUNO (agrupado: Escola → Turma → Aluno)
 // ════════════════════════════════════════════
 function renderTabAlunos() {
-  const byStudent = {};
-  filtRecs.forEach(r => {
-    const k = (r.nome||"").trim().toLowerCase();
-    if (!byStudent[k]) byStudent[k] = { nome: r.nome||"?", list: [] };
-    byStudent[k].list.push(r);
-  });
-
   const wrap = document.getElementById("student-list");
-  if (!Object.keys(byStudent).length) {
+  if (!filtRecs.length) {
     wrap.innerHTML = `<div class="no-data">Nenhum aluno encontrado.</div>`;
     return;
   }
 
-  wrap.innerHTML = Object.values(byStudent).map(s => {
-    const best = Math.max(...s.list.map(a=>a.acertos||0));
-    const avg  = Math.round(s.list.reduce((x,a)=>x+(a.percentual||0),0)/s.list.length);
-    const init = s.nome.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
-    const cor  = avg>=70 ? "#27ae60" : avg>=50 ? "#e67e22" : "#e74c3c";
-    const bc   = avg>=70 ? "b-ok" : avg>=50 ? "b-warn" : "b-err";
-    const sid  = "s-" + s.nome.replace(/\W/g,"_");
+  // Montar hierarquia escola → turma → aluno
+  const tree = {};
+  filtRecs.forEach(r => {
+    const e = r.escola||"(não informado)";
+    const t = r.turma||"(não informado)";
+    const k = (r.nome||"").trim().toLowerCase();
+    if (!tree[e]) tree[e] = {};
+    if (!tree[e][t]) tree[e][t] = {};
+    if (!tree[e][t][k]) tree[e][t][k] = { nome: r.nome||"?", list: [] };
+    tree[e][t][k].list.push(r);
+  });
 
-    const attempts = s.list.map((a,i) => {
-      const ap = a.percentual||0;
-      const aClass = ap>=70?"b-ok":ap>=50?"b-warn":"b-err";
-      const hasQ = a.questoes && a.questoes.length > 0;
-      const detId = `det-${sid}-${i}`;
-      const qHtml = hasQ ? `
-        <button class="toggle-btn" onclick="toggleDet('${detId}')">▶ Ver questão por questão</button>
-        <div id="${detId}" class="q-list" hidden>
-          ${a.questoes.map(q=>`
-            <div class="q-item ${q.ok?'ok':'er'}">
-              <span style="flex-shrink:0">${q.ok?'✅':'❌'}</span>
-              <div>
-                <div>${esc(q.t||"")}</div>
-                ${!q.ok?`<div class="q-detail-wrong">Marcou: ${q.sel||'?'} | Correta: ${q.cor||'?'}</div>`:""}
-              </div>
-            </div>`).join("")}
-        </div>` : "";
-
-      return `<div class="attempt-block">
-        <div class="attempt-info">
-          <strong>${esc(a.modulo||"—")}</strong>
-          <span class="badge ${aClass}">${a.acertos||0}/10 (${ap}%)</span>
-          <span style="color:var(--muted);font-size:.76rem">${fmtDate(a.data)}</span>
-        </div>
-        ${qHtml}
+  wrap.innerHTML = Object.entries(tree).map(([escolaNm, turmas]) => {
+    const turmasHtml = Object.entries(turmas).map(([turmaNm, alunos]) => {
+      const alunosHtml = Object.values(alunos).map(s => studentCard(s, escolaNm, turmaNm)).join("");
+      return `<div class="turma-block">
+        <div class="turma-header">👥 Turma ${esc(turmaNm)} &nbsp;·&nbsp; ${Object.keys(alunos).length} aluno(s)</div>
+        <div class="turma-students">${alunosHtml}</div>
       </div>`;
     }).join("");
-
-    return `<div class="s-card">
-      <div class="s-head" onclick="toggleStudent('${sid}')">
-        <div class="s-av" style="background:${cor}">${init}</div>
-        <div class="s-info">
-          <div class="s-name">${esc(s.nome)}</div>
-          <div class="s-meta">${s.list.length} tentativa(s) · Melhor: ${best}/10 · Média: ${avg}%</div>
-        </div>
-        <span class="badge ${bc}" style="margin-right:4px">${avg}%</span>
-        <span class="chevron" id="chev-${sid}">▼</span>
-      </div>
-      <div class="s-body" id="${sid}">${attempts}</div>
+    return `<div class="escola-block">
+      <div class="escola-header">🏫 ${esc(escolaNm)}</div>
+      ${turmasHtml}
     </div>`;
   }).join("");
+}
+
+function studentCard(s, escolaNm, turmaNm) {
+  const best = Math.max(...s.list.map(a=>a.acertos||0));
+  const avg  = Math.round(s.list.reduce((x,a)=>x+(a.percentual||0),0)/s.list.length);
+  const init = s.nome.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
+  const cor  = avg>=70 ? "#27ae60" : avg>=50 ? "#e67e22" : "#e74c3c";
+  const bc   = avg>=70 ? "b-ok" : avg>=50 ? "b-warn" : "b-err";
+  const sid  = "s-" + (escolaNm+turmaNm+s.nome).replace(/\W/g,"_");
+
+  const attempts = s.list.map((a,i) => {
+    const ap = a.percentual||0;
+    const aClass = ap>=70?"b-ok":ap>=50?"b-warn":"b-err";
+    const hasQ = a.questoes && a.questoes.length > 0;
+    const detId = `det-${sid}-${i}`;
+    const qHtml = hasQ ? `
+      <button class="toggle-btn" onclick="toggleDet('${detId}')">▶ Ver questão por questão</button>
+      <div id="${detId}" class="q-list" hidden>
+        ${a.questoes.map(q=>`
+          <div class="q-item ${q.ok?'ok':'er'}">
+            <span style="flex-shrink:0">${q.ok?'✅':'❌'}</span>
+            <div>
+              <div>${esc(q.t||"")}</div>
+              ${!q.ok?`<div class="q-detail-wrong">Marcou: ${q.sel||'?'} | Correta: ${q.cor||'?'}</div>`:""}
+            </div>
+          </div>`).join("")}
+      </div>` : "";
+
+    return `<div class="attempt-block">
+      <div class="attempt-info">
+        <strong>${esc(a.modulo||"—")}</strong>
+        <span class="badge ${aClass}">${a.acertos||0}/10 (${ap}%)</span>
+        <span style="color:var(--muted);font-size:.76rem">${fmtDate(a.data)}</span>
+      </div>
+      ${qHtml}
+    </div>`;
+  }).join("");
+
+  return `<div class="s-card">
+    <div class="s-head" onclick="toggleStudent('${sid}')">
+      <div class="s-av" style="background:${cor}">${init}</div>
+      <div class="s-info">
+        <div class="s-name">${esc(s.nome)}</div>
+        <div class="s-meta">${s.list.length} tentativa(s) · Melhor: ${best}/10 · Média: ${avg}%</div>
+      </div>
+      <span class="badge ${bc}" style="margin-right:4px">${avg}%</span>
+      <span class="chevron" id="chev-${sid}">▼</span>
+    </div>
+    <div class="s-body" id="${sid}">${attempts}</div>
+  </div>`;
 }
 
 function toggleStudent(id) {
@@ -643,12 +744,39 @@ function switchTab(name, btn) {
 }
 
 // ════════════════════════════════════════════
+// GERADOR DE LINKS
+// ════════════════════════════════════════════
+function toggleLinkGen() {
+  const p = document.getElementById("link-gen-panel");
+  p.hidden = !p.hidden;
+}
+function genLink() {
+  const e = document.getElementById("lg-escola").value.trim();
+  const t = document.getElementById("lg-turma").value.trim();
+  if (!e || !t) { alert("Preencha escola e turma."); return; }
+  const base = location.href.replace(/\/admin\.html.*$/, "/").replace(/\/$/, "");
+  const url  = `${base}/index.html?escola=${encodeURIComponent(e)}&turma=${encodeURIComponent(t)}`;
+  document.getElementById("lg-url").value  = url;
+  document.getElementById("lg-result").hidden = false;
+  document.getElementById("lg-copied").hidden = true;
+}
+function copyLink() {
+  const u = document.getElementById("lg-url");
+  u.select();
+  navigator.clipboard.writeText(u.value).then(()=>{
+    const c = document.getElementById("lg-copied");
+    c.hidden = false;
+    setTimeout(()=>c.hidden=true, 2500);
+  });
+}
+
+// ════════════════════════════════════════════
 // EXPORTAR CSV
 // ════════════════════════════════════════════
 function exportCSV() {
-  const rows = [["Nome","Módulo","Acertos","Total","% Acertos","Data"]];
+  const rows = [["Nome","Escola","Turma","Módulo","Acertos","Total","% Acertos","Data"]];
   filtRecs.forEach(r => rows.push([
-    r.nome||"", r.modulo||"",
+    r.nome||"", r.escola||"", r.turma||"", r.modulo||"",
     r.acertos||0, r.total||10,
     (r.percentual||0)+"%", fmtDate(r.data)
   ]));

@@ -35,6 +35,14 @@ body{font-family:'Segoe UI',sans-serif;background:var(--bg);min-height:100vh;pad
 .mod-num{font-size:.72rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
 .mod-name{font-size:.88rem;font-weight:600;color:var(--text);line-height:1.3}
 
+/* ── badges escola/turma ── */
+.ctx-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;
+  border-radius:20px;font-size:.82rem;font-weight:700}
+.ctx-badge-escola{background:#e8f4fd;color:#1a5276}
+.ctx-badge-turma{background:#e8f5e9;color:#1d8348}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+@media(max-width:400px){.input-row{grid-template-columns:1fr}}
+
 /* ── tela nome ── */
 .back-btn{display:flex;align-items:center;gap:6px;color:#2e86c1;
   background:none;border:none;cursor:pointer;font-size:.9rem;
@@ -119,6 +127,21 @@ input[type=text]:focus{border-color:#2e86c1}
 <div class="card" id="s-name" hidden>
   <button class="back-btn" onclick="goModules()">← Voltar</button>
   <div class="mod-banner" id="name-banner"></div>
+  <!-- badges mostrados quando escola/turma vêm pela URL -->
+  <div id="ctx-badge-wrap" hidden style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+  <!-- campos mostrados quando não há URL params -->
+  <div id="ctx-fields">
+    <div class="input-row">
+      <div>
+        <label for="inp-escola">Escola</label>
+        <input type="text" id="inp-escola" placeholder="Nome da escola..." autocomplete="organization"/>
+      </div>
+      <div>
+        <label for="inp-turma">Turma</label>
+        <input type="text" id="inp-turma" placeholder="Ex: 7A, 8B..."/>
+      </div>
+    </div>
+  </div>
   <div style="margin-bottom:4px">
     <label for="inp-name">Seu nome completo</label>
     <input type="text" id="inp-name" placeholder="Digite seu nome..." autocomplete="name"/>
@@ -448,7 +471,24 @@ const MODULES = [
 // ESTADO E LÓGICA
 // ════════════════════════════════════════════
 const LETTERS = ["A","B","C","D"];
-let selMod = null, studentName = "", curIdx = 0, selOpt = null, answers = [], quizQs = [];
+let selMod = null, studentName = "", escola = "", turma = "";
+let curIdx = 0, selOpt = null, answers = [], quizQs = [];
+
+// ── Lê parâmetros de URL: ?escola=CEM+Santa&turma=7A ──
+(function(){
+  const p = new URLSearchParams(location.search);
+  escola = p.get("escola") || "";
+  turma  = p.get("turma")  || "";
+  if(escola || turma){
+    document.getElementById("ctx-fields").hidden = true;
+    const w = document.getElementById("ctx-badge-wrap");
+    w.hidden = false;
+    if(escola) w.innerHTML += `<span class="ctx-badge ctx-badge-escola">🏫 ${escH(escola)}</span>`;
+    if(turma)  w.innerHTML += `<span class="ctx-badge ctx-badge-turma">👥 Turma ${escH(turma)}</span>`;
+  }
+})();
+
+function escH(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 function shuffle(arr){
   const a=[...arr];
@@ -490,6 +530,15 @@ function goModules(){
 
 // ── Iniciar quiz ──
 function startQuiz(){
+  const fromUrl = document.getElementById("ctx-fields").hidden;
+  if(!fromUrl){
+    const ei = document.getElementById("inp-escola");
+    const ti = document.getElementById("inp-turma");
+    escola = ei.value.trim();
+    turma  = ti.value.trim();
+    if(!escola){ ei.style.borderColor="#e74c3c"; ei.focus(); return; }
+    if(!turma){  ti.style.borderColor="#e74c3c"; ti.focus(); return; }
+  }
   studentName=document.getElementById("inp-name").value.trim();
   if(!studentName){
     const i=document.getElementById("inp-name");
@@ -586,6 +635,8 @@ async function saveResult(name,score,tot,pct,ans){
   if(!db){el.textContent="⚠️ Firebase não configurado — resultado não salvo.";el.style.color="#e74c3c";return;}
   try{
     await db.collection("quiz_resultados").add({
+      escola:escola||"(não informado)",
+      turma:turma||"(não informado)",
       nome:name, modulo:`Módulo ${selMod.id} — ${selMod.name}`,
       acertos:score, total:tot, percentual:pct,
       data:firebase.firestore.FieldValue.serverTimestamp(),
@@ -599,9 +650,13 @@ async function saveResult(name,score,tot,pct,ans){
 function show(id){document.getElementById(id).hidden=false;}
 function hide(id){document.getElementById(id).hidden=true;}
 
-// Enter no campo de nome
+// Enter / validação visual nos campos
 document.getElementById("inp-name").addEventListener("keydown",e=>{if(e.key==="Enter")startQuiz();});
 document.getElementById("inp-name").addEventListener("input",function(){
+  this.style.borderColor=this.value.trim()?"#2e86c1":"#d1d5db";});
+document.getElementById("inp-escola").addEventListener("input",function(){
+  this.style.borderColor=this.value.trim()?"#2e86c1":"#d1d5db";});
+document.getElementById("inp-turma").addEventListener("input",function(){
   this.style.borderColor=this.value.trim()?"#2e86c1":"#d1d5db";});
 
 buildGrid();
