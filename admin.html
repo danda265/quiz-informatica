@@ -755,8 +755,13 @@ function genLink() {
   const e = document.getElementById("lg-escola").value.trim();
   const t = document.getElementById("lg-turma").value.trim();
   if (!e || !t) { alert("Preencha escola e turma."); return; }
-  const base = location.href.replace(/\/admin\.html.*$/, "/").replace(/\/$/, "");
-  const url  = `${base}/index.html?escola=${encodeURIComponent(e)}&turma=${encodeURIComponent(t)}`;
+  // Diretório do app, robusto a como o painel foi aberto:
+  // /admin (GitHub Pages serve admin.html sem extensão), /admin.html ou /admin/
+  const loc = new URL(location.href);
+  let dir = loc.pathname.replace(/\/admin(\.html)?\/?$/i, "/");
+  if (!dir.endsWith("/")) dir += "/";
+  const base = loc.origin + dir;
+  const url  = `${base}index.html?escola=${encodeURIComponent(e)}&turma=${encodeURIComponent(t)}`;
   document.getElementById("lg-url").value  = url;
   document.getElementById("lg-result").hidden = false;
   document.getElementById("lg-copied").hidden = true;
