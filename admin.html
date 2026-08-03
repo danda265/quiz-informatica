@@ -132,6 +132,13 @@ tbody td{padding:10px 14px;color:var(--text)}
 .toggle-btn{background:none;border:none;color:var(--pl);
   font-size:.76rem;cursor:pointer;margin-top:5px;font-weight:600;padding:0}
 .toggle-btn:hover{text-decoration:underline}
+/* módulos agrupados dentro do card do aluno */
+.mod-block{padding:9px 0;border-bottom:1px solid #f0f0f0}
+.mod-block:last-child{border-bottom:none}
+.mod-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.86rem}
+.mod-head strong{color:var(--text)}
+.mod-attempts{margin-top:5px;display:flex;flex-direction:column;gap:6px;padding-left:2px}
+.attempt-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.82rem}
 
 /* ── Dificuldades ── */
 .diff-mod-sel{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
@@ -584,6 +591,11 @@ function renderTabAlunos() {
   }).join("");
 }
 
+// Total de módulos do curso (espelha os 12 módulos definidos em index.html)
+const TOTAL_MODULOS = 12;
+// Extrai o número do módulo de "Módulo N — Nome" (999 se não reconhecido → vai pro fim)
+function modNum(m){ const x = /M[oó]dulo\s+(\d+)/i.exec(m||""); return x ? +x[1] : 999; }
+
 function studentCard(s, escolaNm, turmaNm) {
   const best = Math.max(...s.list.map(a=>a.acertos||0));
   const avg  = Math.round(s.list.reduce((x,a)=>x+(a.percentual||0),0)/s.list.length);
@@ -592,31 +604,53 @@ function studentCard(s, escolaNm, turmaNm) {
   const bc   = avg>=70 ? "b-ok" : avg>=50 ? "b-warn" : "b-err";
   const sid  = "s-" + (escolaNm+turmaNm+s.nome).replace(/\W/g,"_");
 
-  const attempts = s.list.map((a,i) => {
-    const ap = a.percentual||0;
-    const aClass = ap>=70?"b-ok":ap>=50?"b-warn":"b-err";
-    const hasQ = a.questoes && a.questoes.length > 0;
-    const detId = `det-${sid}-${i}`;
-    const qHtml = hasQ ? `
-      <button class="toggle-btn" onclick="toggleDet('${detId}')">▶ Ver questão por questão</button>
-      <div id="${detId}" class="q-list" hidden>
-        ${a.questoes.map(q=>`
-          <div class="q-item ${q.ok?'ok':'er'}">
-            <span style="flex-shrink:0">${q.ok?'✅':'❌'}</span>
-            <div>
-              <div>${esc(q.t||"")}</div>
-              ${!q.ok?`<div class="q-detail-wrong">Marcou: ${q.sel||'?'} | Correta: ${q.cor||'?'}</div>`:""}
-            </div>
-          </div>`).join("")}
-      </div>` : "";
+  // Agrupar todas as tentativas do aluno por módulo, ordenar 1→12
+  const mods = {};
+  s.list.forEach(a => {
+    const num = modNum(a.modulo);
+    if (!mods[num]) mods[num] = { num, nome: a.modulo||"—", attempts: [] };
+    mods[num].attempts.push(a);
+  });
+  const modList = Object.values(mods).sort((x,y)=> x.num - y.num);
+  // dentro de cada módulo, tentativa mais recente primeiro
+  modList.forEach(m => m.attempts.sort((a,b)=> String(b.data||"").localeCompare(String(a.data||""))));
 
-    return `<div class="attempt-block">
-      <div class="attempt-info">
-        <strong>${esc(a.modulo||"—")}</strong>
+  const modsHtml = modList.map(m => {
+    const bestPct = Math.max(...m.attempts.map(a=>a.percentual||0));
+    const mClass  = bestPct>=70?"b-ok":bestPct>=50?"b-warn":"b-err";
+    const multi   = m.attempts.length>1 ? ` · ${m.attempts.length} tentativas` : "";
+
+    const attemptsHtml = m.attempts.map((a,i) => {
+      const ap = a.percentual||0;
+      const aClass = ap>=70?"b-ok":ap>=50?"b-warn":"b-err";
+      const hasQ = a.questoes && a.questoes.length > 0;
+      const detId = `det-${sid}-${m.num}-${i}`;
+      const qHtml = hasQ ? `
+        <button class="toggle-btn" onclick="toggleDet('${detId}')">▶ Ver questão por questão</button>
+        <div id="${detId}" class="q-list" hidden>
+          ${a.questoes.map(q=>`
+            <div class="q-item ${q.ok?'ok':'er'}">
+              <span style="flex-shrink:0">${q.ok?'✅':'❌'}</span>
+              <div>
+                <div>${esc(q.t||"")}</div>
+                ${!q.ok?`<div class="q-detail-wrong">Marcou: ${q.sel||'?'} | Correta: ${q.cor||'?'}</div>`:""}
+              </div>
+            </div>`).join("")}
+        </div>` : "";
+
+      return `<div class="attempt-row">
         <span class="badge ${aClass}">${a.acertos||0}/10 (${ap}%)</span>
         <span style="color:var(--muted);font-size:.76rem">${fmtDate(a.data)}</span>
+        ${qHtml}
+      </div>`;
+    }).join("");
+
+    return `<div class="mod-block">
+      <div class="mod-head">
+        <strong>${esc(m.nome)}</strong>
+        <span class="badge ${mClass}">Melhor: ${bestPct}%${multi}</span>
       </div>
-      ${qHtml}
+      <div class="mod-attempts">${attemptsHtml}</div>
     </div>`;
   }).join("");
 
@@ -625,12 +659,12 @@ function studentCard(s, escolaNm, turmaNm) {
       <div class="s-av" style="background:${cor}">${init}</div>
       <div class="s-info">
         <div class="s-name">${esc(s.nome)}</div>
-        <div class="s-meta">${s.list.length} tentativa(s) · Melhor: ${best}/10 · Média: ${avg}%</div>
+        <div class="s-meta">${modList.length}/${TOTAL_MODULOS} módulos · ${s.list.length} tentativa(s) · Melhor: ${best}/10 · Média: ${avg}%</div>
       </div>
       <span class="badge ${bc}" style="margin-right:4px">${avg}%</span>
       <span class="chevron" id="chev-${sid}">▼</span>
     </div>
-    <div class="s-body" id="${sid}">${attempts}</div>
+    <div class="s-body" id="${sid}">${modsHtml}</div>
   </div>`;
 }
 
