@@ -470,7 +470,7 @@ function applyFilter() {
 // ════════════════════════════════════════════
 function renderCards() {
   const tot   = filtRecs.length;
-  const uniq  = new Set(filtRecs.map(r => (r.nome||"").trim().toLowerCase())).size;
+  const uniq  = new Set(filtRecs.map(r => nameKey(r.nome))).size;
   const media = tot ? (filtRecs.reduce((s,r)=>s+(r.acertos||0),0)/tot).toFixed(1) : "—";
   const pass  = tot ? Math.round(filtRecs.filter(r=>(r.percentual||0)>=70).length/tot*100)+"%" : "—";
 
@@ -569,7 +569,7 @@ function renderTabAlunos() {
   filtRecs.forEach(r => {
     const e = r.escola||"(não informado)";
     const t = r.turma||"(não informado)";
-    const k = (r.nome||"").trim().toLowerCase();
+    const k = nameKey(r.nome);
     if (!tree[e]) tree[e] = {};
     if (!tree[e][t]) tree[e][t] = {};
     if (!tree[e][t][k]) tree[e][t][k] = { nome: r.nome||"?", list: [] };
@@ -595,6 +595,14 @@ function renderTabAlunos() {
 const TOTAL_MODULOS = 12;
 // Extrai o número do módulo de "Módulo N — Nome" (999 se não reconhecido → vai pro fim)
 function modNum(m){ const x = /M[oó]dulo\s+(\d+)/i.exec(m||""); return x ? +x[1] : 999; }
+// Chave de identificação do aluno: ignora maiúsc/minúsc, ACENTOS e espaços repetidos
+// (assim "João", "Joao" e "joão  silva" contam como o MESMO aluno)
+function nameKey(n){
+  var s = (n||'').trim().toLowerCase().normalize('NFD');
+  var out = '';
+  for (var i=0;i<s.length;i++){ var c=s.charCodeAt(i); if(c<0x300||c>0x36f) out+=s[i]; }
+  return out.split(' ').filter(function(w){return w.length>0;}).join(' ');
+}
 
 function studentCard(s, escolaNm, turmaNm) {
   const best = Math.max(...s.list.map(a=>a.acertos||0));
@@ -820,7 +828,7 @@ function exportReport() {
   const filtro = [escVal, turVal, modVal].filter(Boolean).join(" · ") || "Todos os registros";
 
   const tot   = filtRecs.length;
-  const uniq  = new Set(filtRecs.map(r=>(r.nome||"").trim().toLowerCase())).size;
+  const uniq  = new Set(filtRecs.map(r=>nameKey(r.nome))).size;
   const media = tot ? (filtRecs.reduce((s,r)=>s+(r.acertos||0),0)/tot).toFixed(1) : "—";
   const pass  = tot ? Math.round(filtRecs.filter(r=>(r.percentual||0)>=70).length/tot*100) : 0;
 
@@ -836,20 +844,70 @@ function exportReport() {
   const COLORS=['#2980b9','#27ae60','#e74c3c','#f39c12','#8e44ad','#17a589',
                 '#ca6f1e','#cb4335','#7f8c8d','#7d3c98','#5dade2','#b7950b'];
 
-  const tableRows = filtRecs.map((r,i)=>{
-    const p=r.percentual||0;
-    const bg=p>=70?'#d5f5e3':p>=50?'#fef9e7':'#fde8e8';
-    const fg=p>=70?'#1d8348':p>=50?'#9a6505':'#b03030';
-    return `<tr class="${i%2?'alt':''}">
-      <td><strong>${esc(r.nome||'—')}</strong></td>
-      <td>${esc(r.escola||'—')}</td>
-      <td>${esc(r.turma||'—')}</td>
-      <td>${esc(r.modulo||'—')}</td>
-      <td style="text-align:center;font-weight:700">${r.acertos||0}/10</td>
-      <td style="text-align:center"><span style="background:${bg};color:${fg};
-        padding:3px 10px;border-radius:12px;font-weight:700;font-size:11px">${p}%</span></td>
-      <td style="color:#7f8c8d;font-size:11px">${fmtDate(r.data)}</td>
-    </tr>`;
+  // ── Relatório organizado por aluno: Escola → Turma → Aluno → módulos (1→12) + dificuldades ──
+  const rtree = {};
+  filtRecs.forEach(r => {
+    const e = r.escola||"(não informado)";
+    const t = r.turma||"(não informado)";
+    const k = nameKey(r.nome);
+    if(!rtree[e]) rtree[e] = {};
+    if(!rtree[e][t]) rtree[e][t] = {};
+    if(!rtree[e][t][k]) rtree[e][t][k] = { nome: r.nome||"?", list: [] };
+    rtree[e][t][k].list.push(r);
+  });
+
+  const studentsHtml = Object.entries(rtree).map(([escolaNm, turmas]) => {
+    const turmasHtml = Object.entries(turmas).map(([turmaNm, alunos]) => {
+      const alunosArr = Object.values(alunos).sort((a,b)=> a.nome.localeCompare(b.nome,'pt'));
+      const alunosHtml = alunosArr.map(s => {
+        // agrupar por módulo e ordenar 1→12
+        const mods = {};
+        s.list.forEach(a => { const num=modNum(a.modulo);
+          if(!mods[num]) mods[num]={num,nome:a.modulo||"—",attempts:[]};
+          mods[num].attempts.push(a); });
+        const modList = Object.values(mods).sort((x,y)=>x.num-y.num);
+        const avg = Math.round(s.list.reduce((x,a)=>x+(a.percentual||0),0)/s.list.length);
+
+        const modRows = modList.map(m=>{
+          const bestPct = Math.max(...m.attempts.map(a=>a.percentual||0));
+          const bestAc  = Math.max(...m.attempts.map(a=>a.acertos||0));
+          const multi   = m.attempts.length>1 ? ` <span style="color:#95a5a6">(${m.attempts.length}x)</span>` : "";
+          const cor     = bestPct>=70?'#1d8348':bestPct>=50?'#9a6505':'#b03030';
+          return `<tr>
+            <td>${esc(m.nome)}${multi}</td>
+            <td style="text-align:center;font-weight:700">${bestAc}/10</td>
+            <td style="text-align:center;color:${cor};font-weight:700">${bestPct}%</td>
+          </tr>`;
+        }).join("");
+
+        // dificuldades = módulos com melhor nota < 60%
+        const dific = modList.filter(m=> Math.max(...m.attempts.map(a=>a.percentual||0)) < 60)
+                             .map(m=> esc(m.nome));
+        const dificHtml = dific.length
+          ? `<div class="dific">⚠ Dificuldades: ${dific.join(" · ")}</div>`
+          : `<div class="dific ok">✓ Nenhum módulo abaixo de 60%</div>`;
+
+        return `<div class="aluno-card">
+          <div class="aluno-head">
+            <strong>${esc(s.nome)}</strong>
+            <span>${modList.length}/${TOTAL_MODULOS} módulos · Média ${avg}%</span>
+          </div>
+          <table class="mini">
+            <thead><tr><th>Módulo</th><th>Acertos</th><th>Nota</th></tr></thead>
+            <tbody>${modRows}</tbody>
+          </table>
+          ${dificHtml}
+        </div>`;
+      }).join("");
+      return `<div class="turma-sec">
+        <div class="turma-tit">👥 Turma ${esc(turmaNm)} · ${alunosArr.length} aluno(s)</div>
+        ${alunosHtml}
+      </div>`;
+    }).join("");
+    return `<div class="escola-sec">
+      <div class="escola-tit">🏫 ${esc(escolaNm)}</div>
+      ${turmasHtml}
+    </div>`;
   }).join("");
 
   const html=`<!DOCTYPE html>
@@ -892,6 +950,21 @@ thead th{background:#1a5276;color:#fff;padding:10px 13px;text-align:left;
 thead th:nth-child(5),thead th:nth-child(6){text-align:center}
 tbody td{padding:9px 13px;vertical-align:middle;border-bottom:1px solid #f0f2f5}
 tr.alt{background:#f8fafc}
+/* ── relatório por aluno (agrupado) ── */
+.escola-sec{margin-bottom:22px;break-inside:avoid}
+.escola-tit{background:#1a5276;color:#fff;padding:8px 14px;border-radius:8px 8px 0 0;font-weight:800;font-size:.9rem}
+.turma-sec{border:1px solid #e0e6ed;border-top:none;padding:12px 14px;margin-bottom:0}
+.turma-tit{font-weight:700;color:#1a5276;font-size:.82rem;margin-bottom:10px}
+.aluno-card{border:1px solid #e8edf2;border-radius:9px;padding:11px 13px;margin-bottom:10px;break-inside:avoid;background:#fff}
+.aluno-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:7px}
+.aluno-head strong{font-size:.92rem;color:#2c3e50}
+.aluno-head span{font-size:.74rem;color:#7f8c8d;font-weight:700;white-space:nowrap}
+table.mini{width:100%;border-collapse:collapse;font-size:.78rem}
+table.mini thead th{background:#eef3f8;color:#5b6b7a;padding:4px 9px;font-size:.62rem;text-transform:uppercase;letter-spacing:.3px;text-align:left}
+table.mini thead th:nth-child(2),table.mini thead th:nth-child(3){text-align:center}
+table.mini tbody td{padding:4px 9px;border-bottom:1px solid #f2f4f7}
+.dific{margin-top:7px;font-size:.76rem;color:#b03030;font-weight:600}
+.dific.ok{color:#1d8348}
 /* ── rodapé ── */
 .rpt-footer{margin-top:28px;padding-top:12px;border-top:1px solid #e0e6ed;
   font-size:.72rem;color:#bbb;text-align:center}
@@ -950,13 +1023,8 @@ tr.alt{background:#f8fafc}
   </div>
 </div>
 
-<div class="section-title">Resultados Detalhados</div>
-<table>
-  <thead>
-    <tr><th>Aluno</th><th>Escola</th><th>Turma</th><th>Módulo</th><th>Acertos</th><th>Nota</th><th>Data</th></tr>
-  </thead>
-  <tbody>${tableRows}</tbody>
-</table>
+<div class="section-title">Relatório por Aluno — módulos realizados e dificuldades</div>
+${studentsHtml}
 
 <div class="rpt-footer">Quiz Informática Básica · github.com/danda265/quiz-informatica</div>
 
