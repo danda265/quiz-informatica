@@ -228,6 +228,7 @@ tbody td{padding:10px 14px;color:var(--text)}
       </select>
       <button class="btn btn-sm" style="background:#7d3c98;color:#fff" onclick="toggleLinkGen()">🔗 Gerar Link</button>
       <button class="btn btn-green btn-sm" onclick="exportReport()">📄 Relatório PDF</button>
+      <button class="btn btn-sm" style="background:#e67e22;color:#fff" onclick="openRanking()">🏆 Ranking ao Vivo</button>
       <button class="btn btn-outline btn-sm" style="font-size:.76rem" onclick="exportCSV()">CSV</button>
       <button class="btn btn-outline btn-sm" onclick="doLogout()">Sair</button>
     </div>
@@ -821,6 +822,16 @@ function copyLink() {
 // ════════════════════════════════════════════
 // RELATÓRIO PDF (abre nova janela → imprimir)
 // ════════════════════════════════════════════
+function openRanking(){
+  const t = document.getElementById("turma-filter").value;
+  const modStr = document.getElementById("mod-filter").value;
+  const params = [];
+  if(t) params.push("turma="+encodeURIComponent(t));
+  const mn = modStr ? modNum(modStr) : 0;
+  if(mn>=1 && mn<=12) params.push("modulo="+mn);
+  window.open("ranking.html"+(params.length?("?"+params.join("&")):""), "_blank");
+}
+
 function exportReport() {
   const escVal = document.getElementById("escola-filter").value;
   const turVal = document.getElementById("turma-filter").value;

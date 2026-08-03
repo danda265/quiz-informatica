@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ranking ao Vivo — Quiz Informática</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg1:#0b1220; --bg2:#12203a; --card:rgba(255,255,255,.05); --card-b:rgba(255,255,255,.10);
+  --txt:#eef2f8; --muted:#8ea3c0; --gold:#f1c40f; --silver:#cfd8e3; --bronze:#e08b4c;
+  --ok:#2ecc71; --warn:#f39c12; --err:#e74c3c; --accent:#3aa0ff;
+}
+html,body{height:100%}
+body{font-family:'Segoe UI',system-ui,sans-serif;color:var(--txt);
+  background:radial-gradient(1200px 800px at 70% -10%,#1c3157,transparent),
+             linear-gradient(160deg,var(--bg1),var(--bg2));
+  min-height:100%;padding:22px 30px;overflow-x:hidden}
+
+/* ── topo ── */
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.title{display:flex;align-items:center;gap:12px}
+.title h1{font-size:clamp(1.4rem,2.6vw,2.3rem);font-weight:800;letter-spacing:.2px}
+.live{display:inline-flex;align-items:center;gap:7px;background:rgba(46,204,113,.14);
+  color:#7ef0a8;border:1px solid rgba(46,204,113,.35);padding:5px 12px;border-radius:30px;
+  font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.dot{width:9px;height:9px;border-radius:50%;background:#2ecc71;box-shadow:0 0 0 0 rgba(46,204,113,.7);
+  animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(46,204,113,.6)}70%{box-shadow:0 0 0 12px rgba(46,204,113,0)}100%{box-shadow:0 0 0 0 rgba(46,204,113,0)}}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.controls select{background:rgba(255,255,255,.08);color:var(--txt);border:1px solid var(--card-b);
+  border-radius:10px;padding:9px 13px;font-size:.95rem;font-weight:600;outline:none;cursor:pointer}
+.controls select:focus{border-color:var(--accent)}
+.controls option{background:#12203a;color:#fff}
+.btn{background:rgba(255,255,255,.08);color:var(--txt);border:1px solid var(--card-b);
+  border-radius:10px;padding:9px 13px;font-size:.95rem;font-weight:600;cursor:pointer}
+.btn:hover{background:rgba(255,255,255,.15)}
+
+/* ── faixa de contexto ── */
+.ctx{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:22px;color:var(--muted);font-size:1rem}
+.chip{background:var(--card);border:1px solid var(--card-b);border-radius:30px;padding:6px 15px;
+  font-weight:700;color:var(--txt);font-size:.95rem}
+.chip .em{margin-right:6px}
+
+/* ── pódio ── */
+.podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:16px;align-items:end;margin-bottom:26px;max-width:1000px;margin-left:auto;margin-right:auto}
+.pod{background:var(--card);border:1px solid var(--card-b);border-radius:18px;padding:20px 14px;text-align:center;position:relative;transition:transform .3s}
+.pod .medal{font-size:2.4rem;line-height:1}
+.pod .pnome{font-weight:800;font-size:clamp(1rem,1.7vw,1.5rem);margin:8px 0 4px;word-break:break-word}
+.pod .pscore{font-weight:900;font-size:clamp(1.6rem,3vw,2.8rem);line-height:1}
+.pod .ppct{color:var(--muted);font-size:.9rem;font-weight:700;margin-top:2px}
+.pod.p1{border-color:rgba(241,196,15,.55);box-shadow:0 0 40px rgba(241,196,15,.18);padding-bottom:40px}
+.pod.p1 .pscore{color:var(--gold)}
+.pod.p2{border-color:rgba(207,216,227,.4)}
+.pod.p2 .pscore{color:var(--silver)}
+.pod.p3{border-color:rgba(224,139,76,.45)}
+.pod.p3 .pscore{color:var(--bronze)}
+.pod .rankn{position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+  background:#12203a;border:1px solid var(--card-b);border-radius:30px;padding:2px 12px;font-weight:800;font-size:.85rem}
+
+/* ── lista ── */
+.list{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:9px}
+.row{display:grid;grid-template-columns:56px 1fr 150px 92px;gap:14px;align-items:center;
+  background:var(--card);border:1px solid var(--card-b);border-radius:13px;padding:13px 18px;
+  transition:transform .35s,background .35s}
+.row .pos{font-weight:800;font-size:1.3rem;color:var(--muted);text-align:center}
+.row .nm{font-weight:700;font-size:clamp(1rem,1.5vw,1.35rem);word-break:break-word}
+.row .barwrap{height:12px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden}
+.row .bar{height:100%;border-radius:8px;transition:width .5s}
+.row .sc{text-align:right;font-weight:900;font-size:1.3rem}
+.row.flash{animation:flash 1.4s ease}
+@keyframes flash{0%{background:rgba(58,160,255,.35);transform:scale(1.015)}100%{background:var(--card);transform:scale(1)}}
+
+.empty{max-width:1000px;margin:60px auto;text-align:center;color:var(--muted)}
+.empty .big{font-size:3rem;margin-bottom:14px}
+.empty h2{font-weight:700;font-size:1.3rem;color:var(--txt);margin-bottom:6px}
+.foot{text-align:center;color:rgba(255,255,255,.25);font-size:.75rem;margin-top:34px}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="title">
+    <h1>🏆 Ranking ao Vivo</h1>
+    <span class="live"><span class="dot"></span> ao vivo</span>
+  </div>
+  <div class="controls">
+    <select id="sel-turma" title="Turma"></select>
+    <select id="sel-mod" title="Módulo"></select>
+    <button class="btn" id="btn-full" title="Tela cheia">⛶ Tela cheia</button>
+  </div>
+</div>
+
+<div class="ctx">
+  <span class="chip"><span class="em">👥</span><span id="ctx-turma">—</span></span>
+  <span class="chip"><span class="em" id="ctx-mod-em">📚</span><span id="ctx-mod">—</span></span>
+  <span id="ctx-count">Aguardando respostas…</span>
+</div>
+
+<div id="podium" class="podium" hidden></div>
+<div id="list" class="list"></div>
+
+<div class="foot">Quiz Informática Básica · atualiza automaticamente conforme os alunos respondem</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// ── Firebase (mesmo projeto do quiz) ──
+const firebaseConfig = {
+  apiKey:            "AIzaSyA7ignAyg4VEZ88wmXq-TMHCEBWjHyLfMo",
+  authDomain:        "avalia-f988b.firebaseapp.com",
+  projectId:         "avalia-f988b",
+  storageBucket:     "avalia-f988b.firebasestorage.app",
+  messagingSenderId: "1092922742454",
+  appId:             "1:1092922742454:web:04eb10656ee8c63cb2f817"
+};
+let db = null;
+try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) {}
+
+// ── Módulos (espelha os 12 de index.html) ──
+const MODULES = [
+  {id:1,name:'Hardware',emoji:'💻'},{id:2,name:'Windows',emoji:'🪟'},
+  {id:3,name:'Arquivos e Pastas',emoji:'📁'},{id:4,name:'Digitação',emoji:'⌨️'},
+  {id:5,name:'Internet e Segurança',emoji:'🌐'},{id:6,name:'Word',emoji:'📝'},
+  {id:7,name:'Excel',emoji:'📊'},{id:8,name:'PowerPoint',emoji:'📽️'},
+  {id:9,name:'Manutenção',emoji:'🔧'},{id:10,name:'Lógica e Programação',emoji:'🧩'},
+  {id:11,name:'Nuvem e Colaboração',emoji:'☁️'},{id:12,name:'Projeto Final',emoji:'🎓'}
+];
+
+// ── Helpers (sem regex \u/\d por causa do escaping) ──
+// Número do módulo = primeira sequência de dígitos em "Módulo N — Nome"
+function modNum(str){
+  const s = String(str||''); let val=''; let started=false;
+  for (let i=0;i<s.length;i++){ const c=s.charCodeAt(i);
+    if (c>=48 && c<=57){ val+=s[i]; started=true; } else if (started) break; }
+  return val ? parseInt(val,10) : 999;
+}
+// Chave do aluno: ignora acento, maiúsc/minúsc e espaços repetidos
+function nameKey(n){
+  const s=(n||'').trim().toLowerCase().normalize('NFD'); let out='';
+  for (let i=0;i<s.length;i++){ const c=s.charCodeAt(i); if(c<0x300||c>0x36f) out+=s[i]; }
+  return out.split(' ').filter(w=>w.length>0).join(' ');
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// data vem como Timestamp do Firestore (serverTimestamp) — converte pra ms comparável
+function timeVal(d){
+  if(!d) return 0;
+  if(typeof d==='number') return d;
+  if(typeof d==='string') return Date.parse(d)||0;
+  if(typeof d.toMillis==='function') return d.toMillis();
+  if(typeof d.seconds==='number') return d.seconds*1000;
+  return 0;
+}
+
+// ── Estado ──
+let allRecs = [];
+let selTurma = '';
+let selMod = 1;
+let prevKeys = new Set(); // p/ destacar entradas novas/alteradas
+
+// parâmetros de URL: ?turma=601&modulo=3
+(function(){
+  const p = new URLSearchParams(location.search);
+  if (p.get('turma')) selTurma = p.get('turma');
+  const mv = parseInt(p.get('modulo'),10); if (mv>=1 && mv<=12) selMod = mv;
+})();
+
+// popular <select> de módulos
+(function(){
+  const sm = document.getElementById('sel-mod');
+  sm.innerHTML = MODULES.map(m=>`<option value="${m.id}">${m.emoji} Módulo ${m.id} — ${m.name}</option>`).join('');
+  sm.value = String(selMod);
+  sm.addEventListener('change', ()=>{ selMod = parseInt(sm.value,10); prevKeys=new Set(); render(); });
+})();
+document.getElementById('sel-turma').addEventListener('change', function(){
+  selTurma = this.value; prevKeys=new Set(); render();
+});
+document.getElementById('btn-full').addEventListener('click', ()=>{
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+  else document.exitFullscreen && document.exitFullscreen();
+});
+
+// ── Tempo real ──
+if (db){
+  db.collection('quiz_resultados').onSnapshot(snap=>{
+    allRecs = snap.docs.map(d=>d.data());
+    populateTurmas();
+    render();
+  }, err=>{
+    document.getElementById('list').innerHTML =
+      `<div class="empty"><div class="big">⚠️</div><h2>Não consegui conectar ao banco</h2><div>${esc(err.message||'')}</div></div>`;
+  });
+} else {
+  document.getElementById('list').innerHTML =
+    `<div class="empty"><div class="big">⚠️</div><h2>Firebase não carregou</h2></div>`;
+}
+
+function populateTurmas(){
+  const turmas = [...new Set(allRecs.map(r=>r.turma).filter(Boolean))].sort();
+  const st = document.getElementById('sel-turma');
+  if (!turmas.length){ st.innerHTML = `<option value="">(sem turmas ainda)</option>`; return; }
+  if (!selTurma || !turmas.includes(selTurma)) selTurma = turmas.includes(selTurma)?selTurma:turmas[0];
+  st.innerHTML = turmas.map(t=>`<option value="${esc(t)}">👥 Turma ${esc(t)}</option>`).join('');
+  st.value = selTurma;
+}
+
+function render(){
+  const mod = MODULES.find(m=>m.id===selMod) || MODULES[0];
+  document.getElementById('ctx-turma').textContent = selTurma ? ('Turma '+selTurma) : 'Selecione a turma';
+  document.getElementById('ctx-mod').textContent   = `Módulo ${mod.id} — ${mod.name}`;
+  document.getElementById('ctx-mod-em').textContent = mod.emoji;
+
+  // filtra turma + módulo selecionado, pega a MELHOR tentativa de cada aluno
+  const best = {};
+  allRecs.forEach(r=>{
+    if ((r.turma||'') !== selTurma) return;
+    if (modNum(r.modulo) !== selMod) return;
+    const k = nameKey(r.nome);
+    const ac = r.acertos||0;
+    const cur = best[k];
+    if (!cur || ac>cur.acertos || (ac===cur.acertos && timeVal(r.data)<timeVal(cur.data))){
+      best[k] = { nome:r.nome||'?', acertos:ac, pct:r.percentual||0, data:r.data||'' };
+    }
+  });
+  // ordena: mais acertos primeiro; empate → quem terminou antes
+  const rank = Object.values(best).sort((a,b)=> b.acertos-a.acertos || timeVal(a.data)-timeVal(b.data));
+
+  document.getElementById('ctx-count').textContent =
+    rank.length ? `${rank.length} aluno(s) neste módulo` : 'Aguardando respostas…';
+
+  const podium = document.getElementById('podium');
+  const list = document.getElementById('list');
+
+  if (!rank.length){
+    podium.hidden = true;
+    list.innerHTML = `<div class="empty"><div class="big">⏳</div>
+      <h2>${selTurma?('Ninguém respondeu o '+mod.emoji+' Módulo '+mod.id+' ainda'):'Selecione uma turma'}</h2>
+      <div>Assim que os alunos terminarem, eles aparecem aqui automaticamente.</div></div>`;
+    prevKeys = new Set();
+    return;
+  }
+
+  // pódio (top 3)
+  const medals = ['🥇','🥈','🥉'];
+  const order  = [1,0,2]; // exibe 2º, 1º, 3º
+  podium.hidden = false;
+  podium.innerHTML = order.map(idx=>{
+    const s = rank[idx]; if(!s) return `<div></div>`;
+    const cls = idx===0?'p1':idx===1?'p2':'p3';
+    return `<div class="pod ${cls}">
+      <div class="rankn">${idx+1}º</div>
+      <div class="medal">${medals[idx]}</div>
+      <div class="pnome">${esc(s.nome)}</div>
+      <div class="pscore">${s.acertos}/10</div>
+      <div class="ppct">${s.pct}%</div>
+    </div>`;
+  }).join('');
+
+  // lista do 4º em diante
+  const rest = rank.slice(3);
+  const newKeys = new Set(rank.map(s=>nameKey(s.nome)+'|'+s.acertos));
+  list.innerHTML = rest.map((s,i)=>{
+    const pos = i+4;
+    const cor = s.pct>=70?'var(--ok)':s.pct>=50?'var(--warn)':'var(--err)';
+    const fresh = !prevKeys.has(nameKey(s.nome)+'|'+s.acertos) && prevKeys.size>0;
+    return `<div class="row ${fresh?'flash':''}">
+      <div class="pos">${pos}º</div>
+      <div class="nm">${esc(s.nome)}</div>
+      <div class="barwrap"><div class="bar" style="width:${s.pct}%;background:${cor}"></div></div>
+      <div class="sc">${s.acertos}/10</div>
+    </div>`;
+  }).join('');
+
+  prevKeys = newKeys;
+}
+</script>
+</body>
+</html>
