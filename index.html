@@ -144,7 +144,8 @@ input[type=text]:focus{border-color:#2e86c1}
   </div>
   <div style="margin-bottom:4px">
     <label for="inp-name">Seu nome completo</label>
-    <input type="text" id="inp-name" placeholder="Digite seu nome..." autocomplete="name"/>
+    <input type="text" id="inp-name" placeholder="Ex: João Silva" autocomplete="name"/>
+    <div id="name-hint" style="font-size:.8rem;color:#6b7280;margin-top:5px">Digite seu nome <strong>e sobrenome</strong>.</div>
   </div>
   <button class="btn btn-primary" onclick="startQuiz()">Começar →</button>
 </div>
@@ -539,11 +540,22 @@ function startQuiz(){
     if(!escola){ ei.style.borderColor="#e74c3c"; ei.focus(); return; }
     if(!turma){  ti.style.borderColor="#e74c3c"; ti.focus(); return; }
   }
-  studentName=document.getElementById("inp-name").value.trim();
-  if(!studentName){
+  studentName=document.getElementById("inp-name").value.replace(/\s+/g," ").trim();
+  // Exigir nome + sobrenome: ao menos duas palavras de 2+ letras
+  const partesNome = studentName.split(" ").filter(p => p.length >= 2);
+  const nameHint = document.getElementById("name-hint");
+  if(partesNome.length < 2){
     const i=document.getElementById("inp-name");
-    i.style.borderColor="#e74c3c"; i.focus(); return;
+    i.style.borderColor="#e74c3c"; i.focus();
+    if(nameHint){
+      nameHint.innerHTML = studentName
+        ? "Coloque também o <strong>sobrenome</strong> — nome completo."
+        : "Digite seu nome <strong>e sobrenome</strong>.";
+      nameHint.style.color="#e74c3c";
+    }
+    return;
   }
+  if(nameHint) nameHint.style.color="#6b7280";
   curIdx=0; selOpt=null; answers=[];
   quizQs=shuffle(selMod.questions);
   show("s-quiz"); hide("s-name");
@@ -653,7 +665,10 @@ function hide(id){document.getElementById(id).hidden=true;}
 // Enter / validação visual nos campos
 document.getElementById("inp-name").addEventListener("keydown",e=>{if(e.key==="Enter")startQuiz();});
 document.getElementById("inp-name").addEventListener("input",function(){
-  this.style.borderColor=this.value.trim()?"#2e86c1":"#d1d5db";});
+  const v=this.value.replace(/\s+/g," ").trim();
+  const ok=v.split(" ").filter(p=>p.length>=2).length>=2;
+  this.style.borderColor=v?(ok?"#27ae60":"#2e86c1"):"#d1d5db";
+  const h=document.getElementById("name-hint"); if(h) h.style.color="#6b7280";});
 document.getElementById("inp-escola").addEventListener("input",function(){
   this.style.borderColor=this.value.trim()?"#2e86c1":"#d1d5db";});
 document.getElementById("inp-turma").addEventListener("input",function(){
