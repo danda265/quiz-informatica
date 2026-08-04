@@ -172,6 +172,14 @@ tbody td{padding:10px 14px;color:var(--text)}
 .lg-url-row input{flex:1;min-width:220px;padding:8px 12px;border:2px solid var(--pl);
   border-radius:8px;font-size:.8rem;background:#fff;color:var(--primary);cursor:pointer}
 
+/* ── Combinar escolas ── */
+.em-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px;max-height:340px;overflow:auto;padding:2px}
+.em-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;font-size:.84rem}
+.em-item:hover{background:#f5f9ff}
+.em-item input{width:16px;height:16px;cursor:pointer;flex-shrink:0}
+.em-nome{flex:1;word-break:break-word}
+.em-cnt{color:var(--muted);font-weight:700;font-size:.74rem;background:#eef2f7;padding:1px 8px;border-radius:10px}
+
 /* ── Hierarquia escola/turma ── */
 .escola-block{margin-bottom:20px}
 .escola-header{background:var(--primary);color:#fff;padding:10px 18px;border-radius:10px 10px 0 0;
@@ -226,6 +234,7 @@ tbody td{padding:10px 14px;color:var(--text)}
         <option>Módulo 11 — Nuvem e Colaboração</option>
         <option>Módulo 12 — Projeto Final</option>
       </select>
+      <button class="btn btn-sm" style="background:#16a085;color:#fff" onclick="toggleEscolaMerge()">🏫 Combinar escolas</button>
       <button class="btn btn-sm" style="background:#7d3c98;color:#fff" onclick="toggleLinkGen()">🔗 Gerar Link</button>
       <button class="btn btn-green btn-sm" onclick="exportReport()">📄 Relatório PDF</button>
       <button class="btn btn-sm" style="background:#e67e22;color:#fff" onclick="openRanking()">🏆 Ranking ao Vivo</button>
@@ -252,6 +261,22 @@ tbody td{padding:10px 14px;color:var(--text)}
       <input type="text" id="lg-url" readonly onclick="this.select()"/>
       <button class="btn btn-sm" style="background:#7d3c98;color:#fff;white-space:nowrap" onclick="copyLink()">📋 Copiar link</button>
       <span id="lg-copied" hidden style="color:var(--ok);font-size:.8rem;font-weight:700">✅ Copiado!</span>
+    </div>
+  </div>
+
+  <!-- Combinar grafias da mesma escola -->
+  <div class="link-gen-panel" id="escola-merge-panel" hidden style="max-width:1140px;background:#eafaf5;border-color:#a3e4d0">
+    <h4 style="color:#0e7c5a">🏫 Combinar escolas (grafias da mesma escola)</h4>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px;max-width:760px">
+      Variações de escrita (maiúsculas, acentos, pontuação) já são juntadas automaticamente.
+      Marque abaixo as que ainda são a <strong>mesma escola</strong> — inclusive erros de digitação — e clique em Combinar.
+      O nome mais frequente vira o nome do grupo. Fica salvo neste navegador.
+    </p>
+    <div id="em-list" class="em-list"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn btn-sm" style="background:#16a085;color:#fff" onclick="combinarEscolas()">✓ Combinar selecionadas</button>
+      <button class="btn btn-outline btn-sm" onclick="resetEscolas()">↺ Desfazer combinações</button>
+      <button class="btn btn-outline btn-sm" onclick="toggleEscolaMerge()">Fechar</button>
     </div>
   </div>
 
@@ -421,6 +446,8 @@ async function loadData() {
   try {
     const snap = await db.collection("quiz_resultados").orderBy("data","desc").get();
     allRecs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    loadEscolaMerges();
+    computeEscolaRep();
     populateEscolaFilter();
     applyFilter();
   } catch(e) {
@@ -430,10 +457,111 @@ async function loadData() {
 }
 
 // ════════════════════════════════════════════
+// ESCOLAS: normalização automática + combinação manual (salva no navegador)
+// ════════════════════════════════════════════
+// Chave normalizada: minúsculas, sem acento, pontuação vira espaço, espaços colapsados
+function escolaKey(e){
+  const s=(e||'').trim().toLowerCase().normalize('NFD'); let out='';
+  for(let i=0;i<s.length;i++){ const c=s.charCodeAt(i);
+    if(c>=0x300&&c<=0x36f) continue;                 // remove acento
+    if((c>=97&&c<=122)||(c>=48&&c<=57)) out+=s[i];   // letra a-z / dígito
+    else out+=' ';                                    // pontuação/símbolo → espaço
+  }
+  return out.split(' ').filter(w=>w.length>0).join(' ');
+}
+let escolaRep = {};      // key -> { name: grafia mais comum, count }
+let escolaMerges = [];   // [{ nome, keys:[...] }] combinações manuais salvas
+let emGroups = [];       // grupos exibidos no painel (p/ o "combinar" ler)
+
+function loadEscolaMerges(){
+  try { escolaMerges = JSON.parse(localStorage.getItem('quiz_escola_merge_v1')||'[]'); }
+  catch(e){ escolaMerges = []; }
+  if(!Array.isArray(escolaMerges)) escolaMerges = [];
+}
+function saveEscolaMerges(){
+  try { localStorage.setItem('quiz_escola_merge_v1', JSON.stringify(escolaMerges)); } catch(e){}
+}
+// grafia representativa por chave = a mais frequente nos dados
+function computeEscolaRep(){
+  const cnt = {};
+  allRecs.forEach(r=>{
+    const raw = (r.escola && String(r.escola).trim()) ? String(r.escola).trim() : '(não informado)';
+    const k = escolaKey(r.escola) || '__vazio__';
+    if(!cnt[k]) cnt[k] = {};
+    cnt[k][raw] = (cnt[k][raw]||0)+1;
+  });
+  escolaRep = {};
+  Object.keys(cnt).forEach(k=>{
+    let best=null, bestN=-1, total=0;
+    Object.entries(cnt[k]).forEach(([nm,n])=>{ total+=n; if(n>bestN){bestN=n;best=nm;} });
+    escolaRep[k] = { name: best, count: total };
+  });
+}
+// nome de exibição de uma escola (aplica combinação manual, senão o representativo)
+function escolaDisplay(raw){
+  const k = escolaKey(raw) || '__vazio__';
+  for(const g of escolaMerges){ if(g.keys.includes(k)) return g.nome; }
+  return (escolaRep[k] && escolaRep[k].name) || (raw||'(não informado)');
+}
+// grupos efetivos (auto + manual) -> [{nome, keys, count}]
+function currentEscolaGroups(){
+  const groups = {};
+  Object.keys(escolaRep).forEach(k=>{
+    let nome=null;
+    for(const g of escolaMerges){ if(g.keys.includes(k)){ nome=g.nome; break; } }
+    if(!nome) nome = escolaRep[k].name;
+    if(!groups[nome]) groups[nome] = { nome, keys:[], count:0 };
+    groups[nome].keys.push(k);
+    groups[nome].count += escolaRep[k].count;
+  });
+  return Object.values(groups).sort((a,b)=> a.nome.localeCompare(b.nome,'pt'));
+}
+// painel de combinação manual
+function toggleEscolaMerge(){
+  const p = document.getElementById('escola-merge-panel');
+  p.hidden = !p.hidden;
+  if(!p.hidden) renderEscolaMerge();
+}
+function renderEscolaMerge(){
+  emGroups = currentEscolaGroups();
+  const box = document.getElementById('em-list');
+  if(!emGroups.length){ box.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Sem escolas ainda.</div>'; return; }
+  box.innerHTML = emGroups.map((g,i)=>`
+    <label class="em-item">
+      <input type="checkbox" value="${i}">
+      <span class="em-nome">${esc(g.nome)}</span>
+      <span class="em-cnt">${g.count}</span>
+    </label>`).join('');
+}
+function combinarEscolas(){
+  const box = document.getElementById('em-list');
+  const checked = [...box.querySelectorAll('input:checked')].map(c=>emGroups[+c.value]).filter(Boolean);
+  if(checked.length < 2){ alert('Marque pelo menos 2 escolas para combinar.'); return; }
+  const keys = [];
+  checked.forEach(g=> g.keys.forEach(k=>{ if(!keys.includes(k)) keys.push(k); }));
+  const nome = checked.slice().sort((a,b)=>b.count-a.count)[0].nome; // a mais frequente vira o nome
+  escolaMerges = escolaMerges.filter(g=> !g.keys.some(k=> keys.includes(k)));
+  escolaMerges.push({ nome, keys });
+  saveEscolaMerges();
+  populateEscolaFilter();
+  renderEscolaMerge();
+  applyFilter();
+}
+function resetEscolas(){
+  if(!escolaMerges.length) return;
+  if(!confirm('Desfazer todas as combinações manuais de escola?')) return;
+  escolaMerges = [];
+  saveEscolaMerges();
+  populateEscolaFilter();
+  renderEscolaMerge();
+  applyFilter();
+}
+
+// ════════════════════════════════════════════
 // FILTROS ENCADEADOS: ESCOLA → TURMA → MÓDULO
 // ════════════════════════════════════════════
 function populateEscolaFilter() {
-  const escolas = [...new Set(allRecs.map(r => r.escola||"(não informado)"))].sort();
+  const escolas = [...new Set(allRecs.map(r => escolaDisplay(r.escola)))].sort();
   const sel = document.getElementById("escola-filter");
   const cur = sel.value;
   sel.innerHTML = '<option value="">Todas as escolas</option>' +
@@ -443,7 +571,7 @@ function populateEscolaFilter() {
 
 function populateTurmas() {
   const escolaVal = document.getElementById("escola-filter").value;
-  const src = escolaVal ? allRecs.filter(r=>(r.escola||"(não informado)")===escolaVal) : allRecs;
+  const src = escolaVal ? allRecs.filter(r=>escolaDisplay(r.escola)===escolaVal) : allRecs;
   const turmas = [...new Set(src.map(r => r.turma||"(não informado)"))].sort();
   const sel = document.getElementById("turma-filter");
   const cur = sel.value;
@@ -457,7 +585,7 @@ function applyFilter() {
   const t = document.getElementById("turma-filter").value;
   const m = document.getElementById("mod-filter").value;
   filtRecs = allRecs.filter(r => {
-    const re = r.escola||"(não informado)";
+    const re = escolaDisplay(r.escola);
     const rt = r.turma||"(não informado)";
     return (!e || re===e) && (!t || rt===t) && (!m || r.modulo===m);
   });
@@ -568,7 +696,7 @@ function renderTabAlunos() {
   // Montar hierarquia escola → turma → aluno
   const tree = {};
   filtRecs.forEach(r => {
-    const e = r.escola||"(não informado)";
+    const e = escolaDisplay(r.escola);
     const t = r.turma||"(não informado)";
     const k = nameKey(r.nome);
     if (!tree[e]) tree[e] = {};
@@ -858,7 +986,7 @@ function exportReport() {
   // ── Relatório organizado por aluno: Escola → Turma → Aluno → módulos (1→12) + dificuldades ──
   const rtree = {};
   filtRecs.forEach(r => {
-    const e = r.escola||"(não informado)";
+    const e = escolaDisplay(r.escola);
     const t = r.turma||"(não informado)";
     const k = nameKey(r.nome);
     if(!rtree[e]) rtree[e] = {};
