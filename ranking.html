@@ -75,6 +75,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:var(--txt);
 .empty .big{font-size:3rem;margin-bottom:14px}
 .empty h2{font-weight:700;font-size:1.3rem;color:var(--txt);margin-bottom:6px}
 .foot{text-align:center;color:rgba(255,255,255,.25);font-size:.75rem;margin-top:34px}
+#login-ov{position:fixed;inset:0;background:#0b1530ee;display:flex;align-items:center;justify-content:center;z-index:50}
+.login-box{background:#fff;color:#1f2937;border-radius:16px;padding:30px;width:min(360px,92vw);text-align:center}
+.login-box h2{margin-bottom:8px;font-size:1.3rem}.login-box p{color:#6b7280;font-size:.9rem;margin-bottom:16px}
+.login-box input{width:100%;padding:12px;border:2px solid #d1d5db;border-radius:10px;font-size:1rem;margin-bottom:12px}
+.login-box button{width:100%;padding:12px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:700;font-size:1rem;cursor:pointer}
+.login-err{color:#dc2626;font-size:.85rem;margin-top:10px;min-height:1em}
 </style>
 </head>
 <body>
@@ -102,20 +108,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:var(--txt);
 
 <div class="foot">Quiz Informática Básica · atualiza automaticamente conforme os alunos respondem</div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
-// ── Firebase (mesmo projeto do quiz) ──
-const firebaseConfig = {
-  apiKey:            "AIzaSyA7ignAyg4VEZ88wmXq-TMHCEBWjHyLfMo",
-  authDomain:        "avalia-f988b.firebaseapp.com",
-  projectId:         "avalia-f988b",
-  storageBucket:     "avalia-f988b.firebasestorage.app",
-  messagingSenderId: "1092922742454",
-  appId:             "1:1092922742454:web:04eb10656ee8c63cb2f817"
-};
-let db = null;
-try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) {}
+// ── Servidor de relatórios (só o professor, com senha, vê o ranking) ──
+const RELATORIOS = 'https://relatorios.educajogo.com.br';
+let TOKEN = null; try { TOKEN = sessionStorage.getItem('quiz_tk'); } catch(e) {}
 
 // ── Módulos (espelha os 12 de index.html) ──
 const MODULES = [
@@ -142,7 +138,7 @@ function nameKey(n){
   return out.split(' ').filter(w=>w.length>0).join(' ');
 }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-// data vem como Timestamp do Firestore (serverTimestamp) — converte pra ms comparável
+// data vem como texto ISO ou numero — converte pra ms comparável
 function timeVal(d){
   if(!d) return 0;
   if(typeof d==='number') return d;
@@ -180,20 +176,48 @@ document.getElementById('btn-full').addEventListener('click', ()=>{
   else document.exitFullscreen && document.exitFullscreen();
 });
 
-// ── Tempo real ──
-if (db){
-  db.collection('quiz_resultados').onSnapshot(snap=>{
-    allRecs = snap.docs.map(d=>d.data());
+// ── Atualização a cada 8 segundos (precisa da senha do professor) ──
+let timerRank = null;
+function limparSessao(){ TOKEN = null; try { sessionStorage.removeItem('quiz_tk'); } catch(e) {} }
+function pedirSenha(msg){
+  clearInterval(timerRank);
+  let ov = document.getElementById('login-ov'); if (ov) ov.remove();
+  ov = document.createElement('div'); ov.id = 'login-ov';
+  const box = document.createElement('div'); box.className = 'login-box';
+  const h = document.createElement('h2'); h.textContent = '🔒 Ranking do professor';
+  const p = document.createElement('p'); p.textContent = msg || 'Digite a senha para mostrar o ranking.';
+  const inp = document.createElement('input'); inp.type = 'password'; inp.placeholder = 'Senha do professor'; inp.autocomplete = 'current-password';
+  const b = document.createElement('button'); b.textContent = 'Entrar';
+  const er = document.createElement('div'); er.className = 'login-err';
+  async function entrar(){
+    b.disabled = true; er.textContent = '';
+    try {
+      const r = await fetch(RELATORIOS + '/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ senha: inp.value }) });
+      const j = await r.json().catch(()=>({}));
+      if (!r.ok) { er.textContent = j.error || 'Não foi possível entrar.'; return; }
+      TOKEN = j.token; try { sessionStorage.setItem('quiz_tk', TOKEN); } catch(e) {}
+      ov.remove(); iniciarRanking();
+    } catch(e) { er.textContent = 'Sem conexão com o servidor.'; }
+    finally { b.disabled = false; }
+  }
+  b.addEventListener('click', entrar); inp.addEventListener('keydown', e => { if (e.key === 'Enter') entrar(); });
+  box.append(h, p, inp, b, er); ov.append(box); document.body.append(ov); inp.focus();
+}
+async function buscarRanking(){
+  try {
+    const r = await fetch(RELATORIOS + '/api/admin/resultados?jogo=quiz', { headers:{ Authorization:'Bearer ' + TOKEN } });
+    if (r.status === 401) { limparSessao(); pedirSenha('Sessão expirada. Entre de novo.'); return; }
+    if (!r.ok) throw new Error('erro ' + r.status);
+    allRecs = await r.json();
     populateTurmas();
     render();
-  }, err=>{
+  } catch(e) {
     document.getElementById('list').innerHTML =
-      `<div class="empty"><div class="big">⚠️</div><h2>Não consegui conectar ao banco</h2><div>${esc(err.message||'')}</div></div>`;
-  });
-} else {
-  document.getElementById('list').innerHTML =
-    `<div class="empty"><div class="big">⚠️</div><h2>Firebase não carregou</h2></div>`;
+      `<div class="empty"><div class="big">⚠️</div><h2>Não consegui buscar os resultados</h2><div>${esc(e.message||'')}</div></div>`;
+  }
 }
+function iniciarRanking(){ buscarRanking(); clearInterval(timerRank); timerRank = setInterval(buscarRanking, 8000); }
+if (TOKEN) iniciarRanking(); else pedirSenha();
 
 function populateTurmas(){
   const turmas = [...new Set(allRecs.map(r=>r.turma).filter(Boolean))].sort();

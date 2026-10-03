@@ -381,29 +381,14 @@ tbody td{padding:10px 14px;color:var(--text)}
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <script>
-// ════════════════════════════════════════════
-// SENHA — altere aqui para personalizar
-// ════════════════════════════════════════════
-const SENHA = "prof@2025";
 
 // ════════════════════════════════════════════
-// FIREBASE
+// RELATÓRIOS
 // ════════════════════════════════════════════
-const firebaseConfig = {
-  apiKey:            "AIzaSyA7ignAyg4VEZ88wmXq-TMHCEBWjHyLfMo",
-  authDomain:        "avalia-f988b.firebaseapp.com",
-  projectId:         "avalia-f988b",
-  storageBucket:     "avalia-f988b.firebasestorage.app",
-  messagingSenderId: "1092922742454",
-  appId:             "1:1092922742454:web:04eb10656ee8c63cb2f817"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const RELATORIOS = 'https://relatorios.educajogo.com.br';
+let TOKEN = null; try { TOKEN = sessionStorage.getItem('quiz_tk'); } catch(e) {}
 
 // ════════════════════════════════════════════
 // ESTADO
@@ -418,16 +403,29 @@ const C_DESEMP = ['#e74c3c','#f39c12','#3498db','#27ae60'];
 // ════════════════════════════════════════════
 // LOGIN / LOGOUT
 // ════════════════════════════════════════════
-function doLogin() {
-  if (document.getElementById("inp-pwd").value === SENHA) {
-    document.getElementById("s-login").hidden = true;
-    document.getElementById("s-admin").hidden  = false;
-    loadData();
-  } else {
-    document.getElementById("login-err").hidden = false;
-  }
+async function doLogin() {
+  const err = document.getElementById("login-err"), btn = document.querySelector("#s-login .btn-primary");
+  err.hidden = true; btn.disabled = true;
+  try {
+    const r = await fetch(RELATORIOS + "/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ senha: document.getElementById("inp-pwd").value }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { err.textContent = j.error || "Não foi possível entrar."; err.hidden = false; return; }
+    TOKEN = j.token; try { sessionStorage.setItem("quiz_tk", TOKEN); } catch(e) {}
+    document.getElementById("inp-pwd").value = "";
+    mostrarAdmin();
+  } catch(e) { err.textContent = "Sem conexão com o servidor."; err.hidden = false; }
+  finally { btn.disabled = false; }
 }
-function doLogout() {
+function mostrarAdmin() {
+  document.getElementById("s-login").hidden = true;
+  document.getElementById("s-admin").hidden = false;
+  loadData();
+}
+async function doLogout() {
+  const t = TOKEN; TOKEN = null; try { sessionStorage.removeItem("quiz_tk"); } catch(e) {}
+  if (t) { try { await fetch(RELATORIOS + "/api/admin/logout", { method: "POST", headers: { Authorization: "Bearer " + t } }); } catch(e) {} }
+  allRecs = []; filtRecs = [];
   document.getElementById("s-admin").hidden  = true;
   document.getElementById("s-login").hidden  = false;
   document.getElementById("inp-pwd").value   = "";
@@ -436,16 +434,19 @@ function doLogout() {
 document.getElementById("inp-pwd").addEventListener("keydown", e => {
   if (e.key === "Enter") doLogin();
 });
+if (TOKEN) mostrarAdmin();   // sessao ainda valida nesta aba
 
 // ════════════════════════════════════════════
-// CARREGAR FIREBASE
+// CARREGAR RESULTADOS
 // ════════════════════════════════════════════
 async function loadData() {
   document.getElementById("tbody").innerHTML =
     `<tr><td colspan="7" class="loading">Carregando dados…</td></tr>`;
   try {
-    const snap = await db.collection("quiz_resultados").orderBy("data","desc").get();
-    allRecs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const r = await fetch(RELATORIOS + "/api/admin/resultados?jogo=quiz", { headers: { Authorization: "Bearer " + TOKEN } });
+    if (r.status === 401) { await doLogout(); const e = document.getElementById("login-err"); e.textContent = "Sessão expirada. Entre de novo com a senha."; e.hidden = false; return; }
+    if (!r.ok) throw new Error("servidor respondeu " + r.status);
+    allRecs = await r.json();
     loadEscolaMerges();
     computeEscolaRep();
     populateEscolaFilter();

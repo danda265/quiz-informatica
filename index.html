@@ -146,6 +146,7 @@ input[type=text]:focus{border-color:#2e86c1}
     <label for="inp-name">Seu nome completo</label>
     <input type="text" id="inp-name" placeholder="Ex: João Silva" autocomplete="name"/>
     <div id="name-hint" style="font-size:.8rem;color:#6b7280;margin-top:5px">Digite seu nome <strong>e sobrenome</strong>.</div>
+    <div style="font-size:.76rem;color:#6b7280;margin-top:8px;line-height:1.4">🔒 Seu nome, escola, turma e resultado são enviados ao seu professor para acompanhar a aprendizagem. Ficam guardados por até 1 ano e só o professor, com senha, consegue ver. Não digite nenhum outro dado pessoal.</div>
   </div>
   <button class="btn btn-primary" onclick="startQuiz()">Começar →</button>
 </div>
@@ -179,24 +180,11 @@ input[type=text]:focus{border-color:#2e86c1}
   <button class="btn btn-secondary" onclick="retryModule()">Tentar este Módulo novamente</button>
 </div>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
-// ════════════════════════════════════════════
-// FIREBASE — substitua com seus dados reais
-// console.firebase.google.com > Configurações
-// ════════════════════════════════════════════
-const firebaseConfig = {
-  apiKey:            "AIzaSyA7ignAyg4VEZ88wmXq-TMHCEBWjHyLfMo",
-  authDomain:        "avalia-f988b.firebaseapp.com",
-  projectId:         "avalia-f988b",
-  storageBucket:     "avalia-f988b.firebasestorage.app",
-  messagingSenderId: "1092922742454",
-  appId:             "1:1092922742454:web:04eb10656ee8c63cb2f817"
-};
-let db = null;
-try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) {}
+// ═══════════════════════════════════════
+// RELATÓRIOS — servidor próprio do EducaJogo (o aluno só envia; ler exige a senha do professor)
+// ═══════════════════════════════════════
+const RELATORIOS = 'https://relatorios.educajogo.com.br';
 
 // ════════════════════════════════════════════
 // MÓDULOS E QUESTÕES (10 por módulo)
@@ -644,16 +632,13 @@ function msg(p){
 
 async function saveResult(name,score,tot,pct,ans){
   const el=document.getElementById("save-msg");
-  if(!db){el.textContent="⚠️ Firebase não configurado — resultado não salvo.";el.style.color="#e74c3c";return;}
   try{
-    await db.collection("quiz_resultados").add({
-      escola:escola||"(não informado)",
-      turma:turma||"(não informado)",
-      nome:name, modulo:`Módulo ${selMod.id} — ${selMod.name}`,
-      acertos:score, total:tot, percentual:pct,
-      data:firebase.firestore.FieldValue.serverTimestamp(),
-      questoes:(ans||[]).map(a=>({t:a.text.substring(0,150),ok:a.ok,sel:LETTERS[a.sel],cor:LETTERS[a.cor]}))
-    });
+    const r=await fetch(RELATORIOS+"/api/resultado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      jogo:"quiz", escola:escola||"", turma:turma||"", nome:name,
+      modulo:`Módulo ${selMod.id} — ${selMod.name}`, acertos:score, total:tot,
+      dados:{questoes:(ans||[]).map(a=>({t:String(a.text).substring(0,150),ok:!!a.ok,sel:LETTERS[a.sel],cor:LETTERS[a.cor]}))}
+    })});
+    if(!r.ok) throw new Error(r.status===429?"muitos envios agora, tente de novo":"não foi possível salvar ("+r.status+")");
     el.textContent=`✅ Salvo: ${name} — ${score}/${tot} (${pct}%)`;
     el.style.color="#27ae60";
   }catch(e){el.textContent=`❌ Erro: ${e.message}`;el.style.color="#e74c3c";}
