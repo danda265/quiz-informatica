@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="4;url=https://quiz.educajogo.com.br/">
+<link rel="canonical" href="https://quiz.educajogo.com.br/">
+<title>Quiz de Informática mudou de endereço</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;box-sizing:border-box;font-family:system-ui,Segoe UI,sans-serif;text-align:center;background:linear-gradient(180deg,#e8f3ff,#f7fbff);color:#1f3a6b}
+  h1{margin:0;font-size:clamp(22px,5vw,34px)} p{margin:0;font-size:clamp(16px,3.4vw,20px)}
+  a.bt{display:inline-block;margin-top:6px;padding:.7em 1.4em;border-radius:999px;background:#572ad8;color:#fff;font-weight:800;text-decoration:none}
+  small{opacity:.7}
+</style>
+</head>
+<body>
+<h1>Quiz de Informática mudou de endereço</h1>
+<p>Agora ele fica em <b>quiz.educajogo.com.br</b>. Você será levado para lá em instantes.</p>
+<a class="bt" id="novo" href="https://quiz.educajogo.com.br/">Ir para o novo endereço</a>
+<small>✨ Criado por Anderson Rodrigo Costa</small>
+<script>
+// leva cada pagina antiga para a pagina equivalente no endereco novo (admin.html, ranking.html...)
+(function(){
+  var base='/quiz-informatica', p=decodeURIComponent(location.pathname), resto=p.indexOf(base)===0?p.slice(base.length):'/';
+  if(!resto||resto==='/index.html') resto='/';
+  var alvo='https://quiz.educajogo.com.br'+resto+location.search+location.hash;
+  document.getElementById('novo').href=alvo;
+  location.replace(alvo);
+})();
+</script>
+</body>
+</html>
