@@ -113,6 +113,11 @@ input[type=text]:focus{border-color:#2e86c1}
 .eja-site{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:6px 14px;border-radius:999px;background:#fff;color:#1a5276;border:1px solid #cbd5e1;font-weight:700;font-size:.85rem;text-decoration:none;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .eja-site:hover{background:#eef3f8}
 .eja-site:focus-visible{outline:3px solid #2e86c1;outline-offset:2px}
+/* demonstracao: os modulos do jogo completo ficam com cadeado */
+.mod-card{position:relative}
+.mod-card.locked{opacity:.6;border-style:dashed}
+.mod-card .cadeado{position:absolute;top:6px;right:8px;font-size:.95rem}
+.aviso-previa{text-align:center;font-size:.85rem;font-weight:700;color:#1a5276;margin:0 0 12px}
 </style>
 </head>
 <body>
@@ -151,7 +156,7 @@ input[type=text]:focus{border-color:#2e86c1}
     <label for="inp-name">Seu nome completo</label>
     <input type="text" id="inp-name" placeholder="Ex: João Silva" autocomplete="name"/>
     <div id="name-hint" style="font-size:.8rem;color:#6b7280;margin-top:5px">Digite seu nome <strong>e sobrenome</strong>.</div>
-    <div style="font-size:.76rem;color:#6b7280;margin-top:8px;line-height:1.4">🔒 Seu nome, escola, turma e resultado são enviados ao seu professor para acompanhar a aprendizagem. Ficam guardados por até 1 ano e só o professor, com senha, consegue ver. Não digite nenhum outro dado pessoal.</div>
+    <div id="priv-aviso" style="font-size:.76rem;color:#6b7280;margin-top:8px;line-height:1.4">🔒 Seu nome, escola, turma e resultado são enviados ao seu professor para acompanhar a aprendizagem. Ficam guardados por até 1 ano e só o professor, com senha, consegue ver. Não digite nenhum outro dado pessoal.</div>
   </div>
   <button class="btn btn-primary" onclick="startQuiz()">Começar →</button>
 </div>
@@ -190,6 +195,10 @@ input[type=text]:focus{border-color:#2e86c1}
 // RELATÓRIOS — servidor próprio do EducaJogo (o aluno só envia; ler exige a senha do professor)
 // ═══════════════════════════════════════
 const RELATORIOS = 'https://relatorios.educajogo.com.br';
+
+// demonstracao: o venda.js so existe nela (o build do site poe antes deste script) e os modulos 3 a 12 chegam sem questoes,
+// porque elas ficam entre as marcas COMPLETO e nao vao para a previa
+const PREVIA = typeof EJAVenda !== 'undefined';
 
 // ════════════════════════════════════════════
 // MÓDULOS E QUESTÕES (10 por módulo)
@@ -240,6 +249,7 @@ const MODULES = [
    o:["São a mesma coisa","Minimizar encerra; Fechar mantém em segundo plano","Fechar salva; Minimizar descarta","Fechar encerra o programa; Minimizar mantém rodando em segundo plano"],c:3}
 ]},
 {id:3, name:"Arquivos e Pastas", emoji:"📁", color:"#17a589", questions:[
+/*COMPLETO*/
   {t:"Qual extensão identifica um arquivo do Microsoft Word?",
    o:[".docx",".xlsx",".pptx",".pdf"],c:0},
   {t:"Ao RENOMEAR uma pasta, o que acontece com os arquivos que estão dentro dela?",
@@ -260,8 +270,10 @@ const MODULES = [
    o:["Pasta organiza e agrupa arquivos; arquivo contém os dados em si","São a mesma coisa","Arquivo organiza pastas; pasta contém dados","Pasta só existe em pendrives"],c:0},
   {t:"Se você EXCLUIR uma pasta por engano no Windows, ainda é possível recuperá-la?",
    o:["Não, ela é perdida para sempre","Sim, restaurando pela Lixeira","Só reinstalando o Windows","Só o professor pode recuperar"],c:1}
+/*/COMPLETO*/
 ]},
 {id:4, name:"Digitação", emoji:"⌨️", color:"#229954", questions:[
+/*COMPLETO*/
   {t:"Qual a diferença entre Backspace e Delete?",
    o:["São iguais — ambas apagam à esquerda","Delete apaga à esquerda; Backspace à direita","Backspace apaga à ESQUERDA do cursor; Delete apaga à DIREITA","Backspace apaga palavras inteiras"],c:2},
   {t:"Para que serve a tecla Shift?",
@@ -282,8 +294,10 @@ const MODULES = [
    o:["Abrir e fechar o programa","Aumentar e diminuir o zoom","Ir para o início e o final da linha do texto","Copiar e colar texto"],c:2},
   {t:"Uma senha de treino bem construída deve conter:",
    o:["Somente números","Somente letras minúsculas","O nome do usuário repetido","Maiúscula, minúscula, número e símbolo"],c:3}
+/*/COMPLETO*/
 ]},
 {id:5, name:"Internet e Segurança", emoji:"🌐", color:"#ca6f1e", questions:[
+/*COMPLETO*/
   {t:"O que é phishing?",
    o:["Tentativa de golpe por e-mail ou site falso para roubar dados pessoais","Vírus que apaga arquivos","Programa para acelerar a internet","Técnica para compactar arquivos"],c:0},
   {t:"Qual das opções é uma senha FORTE?",
@@ -304,8 +318,10 @@ const MODULES = [
    o:["8 caracteres com maiúsculas, minúsculas, números e símbolos","4 caracteres numéricos","6 letras minúsculas","O nome do usuário com números"],c:0},
   {t:"O que significa fazer download de um arquivo?",
    o:["Enviar para outro computador","Baixar um arquivo da internet para o seu computador","Compactar para economizar espaço","Salvar na nuvem"],c:1}
+/*/COMPLETO*/
 ]},
 {id:6, name:"Word", emoji:"📝", color:"#2471a3", questions:[
+/*COMPLETO*/
   {t:"Qual a diferença entre DIGITAR e FORMATAR um texto no Word?",
    o:["São a mesma coisa","Formatar é salvar o arquivo","Digitar é colocar o conteúdo; Formatar é mudar a aparência e organizar o texto","Digitar serve só para títulos"],c:2},
   {t:"Antes de aplicar negrito, itálico ou qualquer formatação em uma palavra específica, o que você deve fazer primeiro?",
@@ -326,8 +342,10 @@ const MODULES = [
    o:["Deixa o texto só do lado direito","Centraliza apenas o título","Alinha o texto dos dois lados, deixando os parágrafos mais uniformes","Aumenta o tamanho da fonte"],c:2},
   {t:"Qual das opções abaixo é um exemplo de documento comum criado no Word, usado no dia a dia?",
    o:["Planilha de cálculo","Apresentação de slides","Banco de dados","Currículo ou carta"],c:3}
+/*/COMPLETO*/
 ]},
 {id:7, name:"Excel", emoji:"📊", color:"#1d8348", questions:[
+/*COMPLETO*/
   {t:"Qual função do Excel soma um intervalo de células?",
    o:["=SOMA()","=MEDIA()","=CONTA()","=TOTAL()"],c:0},
   {t:"Qual função calcula a média de um intervalo?",
@@ -348,8 +366,10 @@ const MODULES = [
    o:["Resumo interativo para analisar e organizar grandes volumes de dados","Tabela que gira sozinha","Tabela com fórmulas coloridas","Tabela que se atualiza a cada segundo"],c:0},
   {t:"O que significa a referência A1 no Excel?",
    o:["Primeira planilha, coluna 1","Coluna A, linha 1 — célula no cruzamento dessas coordenadas","Primeiro arquivo aberto","Célula com maior valor"],c:1}
+/*/COMPLETO*/
 ]},
 {id:8, name:"PowerPoint", emoji:"📽️", color:"#cb4335", questions:[
+/*COMPLETO*/
   {t:"O que estabelece a Regra 10-20-30?",
    o:["10 slides, 20 fontes, 30 imagens","10 animações, 20 transições, 30 slides","Máximo 10 slides, 20 min de apresentação e fonte mínima de 30pt","10 cores, 20 slides, 30s por slide"],c:2},
   {t:"Qual tecla inicia a apresentação em tela cheia?",
@@ -370,8 +390,10 @@ const MODULES = [
    o:["Ctrl+P e imprimir como PDF","Arquivo > Salvar Como > escolher PDF","As duas alternativas estão corretas","Não é possível"],c:2},
   {t:"Por que seguir a Regra 10-20-30 melhora apresentações?",
    o:["O PowerPoint exige esse formato","Economizar memória","Compatibilidade com outros programas","Manter o público engajado, evitar excesso de informação e garantir boa leitura"],c:3}
+/*/COMPLETO*/
 ]},
 {id:9, name:"Manutenção", emoji:"🔧", color:"#717d7e", questions:[
+/*COMPLETO*/
   {t:"O que é a Regra 3-2-1 de backup?",
    o:["3 cópias dos dados, em 2 mídias diferentes, sendo 1 fora do local físico","Backup 3x/dia, 2 pendrives, 1x/semana","Backup de 3 pastas em 2 computadores 1x/mês","3 HDs, 2 pendrives, 1 nuvem"],c:0},
   {t:"Qual atalho abre o Gerenciador de Tarefas diretamente?",
@@ -392,8 +414,10 @@ const MODULES = [
    o:["Erro crítico do sistema que causa reinicialização automática","Tela de boas-vindas do Windows","Protetor de tela decorativo","Modo de hibernação"],c:0},
   {t:"Por que reiniciar o computador resolve muitos problemas?",
    o:["O computador 'esquece' os erros","Limpa a RAM, encerra processos presos e aplica atualizações pendentes","O disco se reorganiza","O antivírus faz varredura completa"],c:1}
+/*/COMPLETO*/
 ]},
 {id:10, name:"Lógica e Programação", emoji:"🧩", color:"#7d3c98", questions:[
+/*COMPLETO*/
   {t:"Quais são os 4 pilares do Pensamento Computacional?",
    o:["Hardware, Software, Internet e Banco de Dados","Python, Scratch, HTML e CSS","Decomposição, Reconhecimento de Padrões, Abstração e Algoritmo","Input, Processamento, Output e Armazenamento"],c:2},
   {t:"No Python, qual estrutura é usada para DECISÕES condicionais?",
@@ -414,8 +438,10 @@ const MODULES = [
    o:["Losango","Oval/Elipse","Retângulo","Cilindro"],c:2},
   {t:"O que é uma VARIÁVEL em programação?",
    o:["Erro no código","Tipo de laço de repetição","Arquivo de configuração","Espaço na memória com nome, usado para guardar e manipular valores"],c:3}
+/*/COMPLETO*/
 ]},
 {id:11, name:"Nuvem e Colaboração", emoji:"☁️", color:"#2e86c1", questions:[
+/*COMPLETO*/
   {t:"Quantos GB gratuitos o Google Drive oferece?",
    o:["15 GB","5 GB","10 GB","50 GB"],c:0},
   {t:"Diferença entre permissão 'Editor' e 'Visualizador' no Google Drive:",
@@ -436,8 +462,10 @@ const MODULES = [
    o:["Gerar link de compartilhamento ou adicionar e-mails com a permissão desejada","Só por e-mail","Enviar cópia para cada pessoa","Não é possível no plano gratuito"],c:0},
   {t:"Por que fazer backup na nuvem é importante?",
    o:["Para acelerar o computador","Proteger arquivos contra perda por falha de hardware, roubo ou acidentes","Economizar energia","Evitar atualizações do Windows"],c:1}
+/*/COMPLETO*/
 ]},
 {id:12, name:"Projeto Final", emoji:"🎓", color:"#b7950b", questions:[
+/*COMPLETO*/
   {t:"O que é ergonomia no uso do computador?",
    o:["Velocidade de digitação em WPM","Software de monitoramento de saúde","Práticas de postura e configuração do ambiente para prevenir lesões","Qualidade da resolução do monitor"],c:2},
   {t:"O que é a Regra 20-20-20 para saúde ocular?",
@@ -458,6 +486,7 @@ const MODULES = [
    o:["Ctrl+Y","Ctrl+X","Ctrl+Z","Ctrl+D"],c:2},
   {t:"Ao terminar de usar o pendrive, o correto é:",
    o:["Remover diretamente da USB a qualquer momento","Desligar o computador e então remover","Formatar antes de remover","Usar 'Ejetar com segurança' antes de remover"],c:3}
+/*/COMPLETO*/
 ]}
 ];
 
@@ -502,6 +531,10 @@ function buildGrid(){
       <div class="mod-emoji">${m.emoji}</div>
       <div class="mod-num" style="color:${m.color}">Módulo ${m.id}</div>
       <div class="mod-name">${m.name}</div>`;
+    if(!m.questions.length){   // so acontece na demonstracao
+      d.classList.add("locked");
+      d.insertAdjacentHTML("beforeend",'<span class="cadeado" aria-hidden="true">🔒</span>');
+    }
     d.addEventListener("click",()=>openModule(m));
     grid.appendChild(d);
   });
@@ -509,6 +542,7 @@ function buildGrid(){
 
 // ── Selecionar módulo ──
 function openModule(m){
+  if(!m.questions.length){EJAVenda.mostrar("parte");return;}   // modulo do jogo completo
   selMod=m;
   const banner=document.getElementById("name-banner");
   banner.style.background=m.color;
@@ -637,6 +671,12 @@ function msg(p){
 
 async function saveResult(name,score,tot,pct,ans){
   const el=document.getElementById("save-msg");
+  if(PREVIA){   // demonstracao: nada vai para o professor; depois do resultado, a tela de venda
+    el.textContent="Demonstração: o resultado não foi enviado a ninguém.";
+    el.style.color="#6b7280";
+    setTimeout(()=>EJAVenda.mostrar("fim"),2500);
+    return;
+  }
   try{
     const r=await fetch(RELATORIOS+"/api/resultado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
       jogo:"quiz", escola:escola||"", turma:turma||"", nome:name,
@@ -665,6 +705,16 @@ document.getElementById("inp-turma").addEventListener("input",function(){
   this.style.borderColor=this.value.trim()?"#2e86c1":"#d1d5db";});
 
 buildGrid();
+
+// demonstracao: sem escola e turma (nada e enviado), aviso na grade e na tela do nome
+if(PREVIA){
+  document.getElementById("ctx-fields").hidden = true;
+  document.getElementById("priv-aviso").textContent = "Demonstração: seu nome fica só neste aparelho; nada é enviado a ninguém.";
+  const aviso = document.createElement("div");
+  aviso.className = "aviso-previa";
+  aviso.textContent = "Demonstração: módulos 1 e 2 (" + MODULES.filter(m=>m.questions.length).map(m=>m.name).join(" e ") + "). 🔒 = só no jogo completo.";
+  document.getElementById("mod-grid").before(aviso);
+}
 </script>
 </body>
 </html>

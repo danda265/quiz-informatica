@@ -932,6 +932,8 @@ function genLink() {
   const loc = new URL(location.href);
   let dir = loc.pathname.replace(/\/admin(\.html)?\/?$/i, "/");
   if (!dir.endsWith("/")) dir += "/";
+  // o jogo completo mora em /_full/ (so abre com o codigo de turma); o link dos alunos e o da raiz, que abre a demonstracao ou o completo conforme o aparelho
+  dir = dir.replace(/^\/_full\//, "/");
   const base = loc.origin + dir;
   const url  = `${base}index.html?escola=${encodeURIComponent(e)}&turma=${encodeURIComponent(t)}`;
   document.getElementById("lg-url").value  = url;
